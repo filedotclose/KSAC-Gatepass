@@ -1,24 +1,38 @@
 import jwt from "jsonwebtoken";
 
-const ACCESS_SECRET = process.env.JWT_SECRET!;
-const REFRESH_SECRET = process.env.REFRESH_SECRET!;
+function getJwtSecrets() {
+  const accessSecret = process.env.JWT_SECRET;
+  const refreshSecret = process.env.REFRESH_SECRET;
+
+  if (!accessSecret) {
+    throw new Error("Security Misconfiguration: JWT_SECRET environment variable is missing.");
+  }
+  if (!refreshSecret) {
+    throw new Error("Security Misconfiguration: REFRESH_SECRET environment variable is missing.");
+  }
+
+  return { accessSecret, refreshSecret };
+}
 
 export function generateAccessToken(user: any) {
+  const { accessSecret } = getJwtSecrets();
   return jwt.sign(
     { id: user._id, role: user.role },
-    ACCESS_SECRET,
+    accessSecret,
     { expiresIn: "15m" }
   );
 }
 
 export function generateRefreshToken(user: any) {
+  const { refreshSecret } = getJwtSecrets();
   return jwt.sign(
     { id: user._id },
-    REFRESH_SECRET,
+    refreshSecret,
     { expiresIn: "7d" }
   );
 }
 
 export function verifyAccessToken(token: string) {
-  return jwt.verify(token, ACCESS_SECRET);
+  const { accessSecret } = getJwtSecrets();
+  return jwt.verify(token, accessSecret);
 }

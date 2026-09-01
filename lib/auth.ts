@@ -24,6 +24,11 @@ export async function getUserFromToken() : Promise<IUser | null> {
       rollNo: userObj.rollNo,
       email: userObj.email,
       role: userObj.role,
+      isSocietyLead: userObj.isSocietyLead ?? false,
+      society: userObj.society,
+      position: userObj.position,
+      allocatedRoom: userObj.allocatedRoom,
+      societyPositions: userObj.societyPositions,
     } as IUser;
   } catch {
     return null;

@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { jwtVerify } from "jose"; // Using jose for edge-compatible JWT verification
+import { jwtVerify } from "jose";
 
-const ACCESS_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "default_secret");
+const rawSecret = process.env.JWT_SECRET;
+const ACCESS_SECRET = rawSecret ? new TextEncoder().encode(rawSecret) : null;
+
+function applySecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  return response;
+}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -12,26 +22,30 @@ export async function proxy(request: NextRequest) {
     const token = request.cookies.get("accessToken")?.value;
 
     if (!token) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return applySecurityHeaders(NextResponse.redirect(new URL("/login", request.url)));
+    }
+
+    if (!ACCESS_SECRET) {
+      console.error("Critical Security Alert: JWT_SECRET is not configured in environment.");
+      return applySecurityHeaders(NextResponse.redirect(new URL("/login", request.url)));
     }
 
     try {
       // Verify token
       const { payload } = await jwtVerify(token, ACCESS_SECRET);
-      
-      // Add role to headers so server components can access it easily if needed
+
       const response = NextResponse.next();
       response.headers.set("x-user-role", payload.role as string);
-      return response;
-    } catch (error) {
+      return applySecurityHeaders(response);
+    } catch {
       // Token invalid or expired
-      return NextResponse.redirect(new URL("/login", request.url));
+      return applySecurityHeaders(NextResponse.redirect(new URL("/login", request.url)));
     }
   }
 
-  return NextResponse.next();
+  return applySecurityHeaders(NextResponse.next());
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

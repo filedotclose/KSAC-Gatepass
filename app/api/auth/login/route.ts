@@ -2,77 +2,93 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
-import {
-  generateAccessToken,
-  generateRefreshToken,
-} from "@/lib/jwt";
+import { generateAccessToken, generateRefreshToken } from "@/lib/jwt";
+import { getClientIp, checkAuthRateLimit, setRateLimitHeaders } from "@/lib/rateLimit";
+import { parseAndValidateBody, sanitizeEmail, sanitizeString } from "@/lib/sanitize";
 
 export async function POST(req: Request) {
   try {
-    console.log("Login API started");
-    await connectDB();
-    console.log("DB connected");
+    const clientIp = getClientIp(req);
 
-    let body;
-    try {
-      body = await req.json();
-    } catch (e) {
-      console.error("JSON parse error:", e);
-      return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
+    // 1. Safe Body Parsing & Payload Size Limit (< 50KB)
+    const bodyResult = await parseAndValidateBody<{ email?: unknown; password?: unknown }>(req);
+    if (!bodyResult.ok) {
+      return bodyResult.response;
     }
 
-    const { email, password } = body;
-    console.log("Login attempt for:", email);
+    const { email, password } = bodyResult.data;
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { message: "Missing credentials" },
-        { status: 400 }
+    // 2. Input Sanitization
+    const emailCheck = sanitizeEmail(email);
+    if (!emailCheck.valid) {
+      return NextResponse.json({ message: emailCheck.error }, { status: 400 });
+    }
+    const cleanEmail = emailCheck.email;
+
+    const passwordCheck = sanitizeString(password, 128, "Password");
+    if (!passwordCheck.valid || !passwordCheck.value) {
+      return NextResponse.json({ message: "Password is required." }, { status: 400 });
+    }
+    const cleanPassword = passwordCheck.value;
+
+    // 3. Authentication Rate Limiting (Max 8 attempts per 15 mins per IP + Account)
+    const rateLimitKey = `${clientIp}:${cleanEmail}`;
+    const rateLimitResult = checkAuthRateLimit(rateLimitKey);
+
+    if (!rateLimitResult.allowed) {
+      const response = NextResponse.json(
+        {
+          message: `Too many login attempts. Account temporarily locked. Please try again in ${rateLimitResult.retryAfterSeconds} seconds.`,
+          retryAfter: rateLimitResult.retryAfterSeconds,
+        },
+        { status: 429 }
       );
+      setRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
     }
 
-    const user = await User.findOne({ email });
-    console.log("User found:", user ? "Yes" : "No");
+    await connectDB();
+
+    const user = await User.findOne({ email: cleanEmail });
 
     if (!user) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { message: "Invalid credentials" },
         { status: 401 }
       );
+      setRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
     }
 
-    console.log("Comparing passwords...");
-    const isMatch = await bcrypt.compare(
-      password,
-      user.passwordHash
-    );
-    console.log("Password match:", isMatch);
+    const isMatch = await bcrypt.compare(cleanPassword, user.passwordHash);
 
     if (!isMatch) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { message: "Invalid credentials" },
         { status: 401 }
       );
+      setRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
     }
 
-    console.log("Generating tokens...");
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
-    console.log("Tokens generated");
 
     user.refreshToken = refreshToken;
     await user.save();
-    console.log("User token saved");
 
     const response = NextResponse.json({
       message: "Login successful",
     });
+
+    setRateLimitHeaders(response.headers, rateLimitResult);
 
     response.cookies.set("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
+      maxAge: 15 * 60, // 15 minutes
     });
 
     response.cookies.set("refreshToken", refreshToken, {
@@ -80,14 +96,14 @@ export async function POST(req: Request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
     });
 
-    console.log("Login successful, returning response");
     return response;
   } catch (error: any) {
-    console.error("CRITICAL Login Error:", error);
+    console.error("Login Server Error:", error);
     return NextResponse.json(
-      { message: "Server error", detail: error.message },
+      { message: "An internal server error occurred.", detail: process.env.NODE_ENV === "development" ? error.message : undefined },
       { status: 500 }
     );
   }
