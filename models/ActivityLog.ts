@@ -13,7 +13,7 @@ const activityLogSchema = new mongoose.Schema({
   },
   activityType: {
     type: String,
-    enum: ["HOSTEL_EXIT", "KSAC_ENTRY", "KSAC_EXIT", "HOSTEL_ENTRY"],
+    enum: ["HOSTEL_EXIT", "KSAC_ENTRY", "KSAC_EXIT", "HOSTEL_ENTRY", "KSAC_VERIFIED", "PASS_APPROVED", "PASS_REQUESTED", "ADMIN_OVERRIDE"],
     required: true,
   },
   timestamp: {
@@ -23,7 +23,7 @@ const activityLogSchema = new mongoose.Schema({
   location: {
     type: String,
     required: true,
-  }
+  },
 });
 
 // Index for performance when querying logs by student

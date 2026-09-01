@@ -1,12 +1,13 @@
 import { cookies } from "next/headers";
 import { verifyAccessToken } from "./jwt";
 import { connectDB } from "./db";
-import User  from "@/models/User";
-import {IUser} from "@/types/user"
-export async function getUserFromToken() : Promise<IUser | null> {
+import User from "@/models/User";
+import { IUser } from "@/types/user";
+
+export async function getUserFromToken(): Promise<IUser | null> {
   try {
     const cookieStore = await cookies();
-    const token =  cookieStore.get("accessToken")?.value;
+    const token = cookieStore.get("accessToken")?.value;
 
     if (!token) return null;
 
@@ -24,6 +25,7 @@ export async function getUserFromToken() : Promise<IUser | null> {
       rollNo: userObj.rollNo,
       email: userObj.email,
       role: userObj.role,
+      hostel: userObj.hostel || "KP-7A",
       isSocietyLead: userObj.isSocietyLead ?? false,
       society: userObj.society,
       position: userObj.position,

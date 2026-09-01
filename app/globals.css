@@ -5,60 +5,115 @@
 }
 
 @layer base {
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply text-slate-900 antialiased font-sans transition-colors duration-500 bg-[#f7fbf8];
     background-image:
-      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(5, 150, 105, 0.12) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(20, 184, 166, 0.1) 0px, transparent 50%),
-      radial-gradient(at 0% 100%, rgba(4, 120, 87, 0.08) 0px, transparent 50%);
+      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 45%),
+      radial-gradient(at 100% 0%, rgba(5, 150, 105, 0.10) 0px, transparent 45%),
+      radial-gradient(at 100% 100%, rgba(20, 184, 166, 0.08) 0px, transparent 45%),
+      radial-gradient(at 0% 100%, rgba(4, 120, 87, 0.06) 0px, transparent 45%);
     min-height: 100vh;
+    padding-top: var(--sat);
+    padding-bottom: var(--sab);
   }
 }
 
 @layer components {
-
-  /* Define glass as a reusable property set using standard CSS variables or local classes */
+  /* Glassmorphism surfaces */
   .glass {
-    @apply bg-white/70 backdrop-blur-2xl border border-white/50;
-    box-shadow: 0 20px 50px rgba(16, 185, 129, 0.06);
+    @apply bg-white/80 backdrop-blur-2xl border border-white/60;
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.05);
   }
 
   .floating-nav-container {
-    @apply fixed top-4 sm:top-10 left-0 right-0 z-50 flex justify-center px-4 sm:px-8;
+    @apply fixed top-2.5 sm:top-6 md:top-8 left-0 right-0 z-50 flex justify-center px-3 sm:px-6 md:px-8 pointer-events-none;
   }
 
   .floating-nav {
-    @apply w-full max-w-7xl rounded-2xl sm:rounded-[3rem] px-4 sm:px-10 h-16 sm:h-24 flex items-center justify-between transition-all duration-700;
-    @apply bg-white/70 backdrop-blur-2xl border border-white/50;
-    box-shadow: 0 20px 50px rgba(16, 185, 129, 0.08);
-    outline: 1px solid rgba(0, 0, 0, 0.03);
+    @apply pointer-events-auto w-full max-w-7xl rounded-2xl sm:rounded-3xl md:rounded-[2.5rem] px-3.5 sm:px-6 md:px-10 h-14 sm:h-18 md:h-22 flex items-center justify-between transition-all duration-500;
+    @apply bg-white/85 backdrop-blur-xl border border-white/70;
+    box-shadow: 0 12px 40px rgba(16, 185, 129, 0.09);
+    outline: 1px solid rgba(0, 0, 0, 0.04);
   }
 
   .gradient-text {
     @apply text-transparent bg-clip-text bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 font-extrabold;
   }
 
+  /* Adaptive entrance animations */
   .animate-entrance {
-    animation: flowIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: mobileFlowIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
-  @keyframes flowIn {
+  @media (min-width: 768px) {
+    .animate-entrance {
+      animation: desktopFlowIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  }
+
+  @keyframes mobileFlowIn {
     from {
       opacity: 0;
-      transform: translateY(24px) scale(0.99);
+      transform: translateY(12px);
     }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
+  @keyframes desktopFlowIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.995);
+    }
     to {
       opacity: 1;
       transform: translateY(0) scale(1);
     }
+  }
+
+  /* Mobile Boarding Pass styling */
+  .pass-ticket-rip {
+    background-image: radial-gradient(circle at center, transparent 6px, #ffffff 6px);
+  }
+
+  /* Responsive Touch Target */
+  .touch-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+}
+
+/* Accessibility: Reduce motion when requested */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {

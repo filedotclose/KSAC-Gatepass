@@ -1,4 +1,12 @@
 import mongoose from "mongoose";
+import dns from "dns";
+
+// Fix Windows Node.js querySrv ETIMEOUT by setting reliable public DNS
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch {
+  // Ignore in restricted environments
+}
 
 /**
  * Global is used here to maintain a cached connection across hot reloads
@@ -19,6 +27,7 @@ export async function connectDB() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      serverSelectionTimeoutMS: 8000,
     };
 
     const connStr = process.env.MONGODB_URI;

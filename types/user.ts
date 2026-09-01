@@ -1,4 +1,4 @@
-export type Role = "student" | "warden" | "ksac";
+export type Role = "student" | "warden" | "ksac" | "admin";
 
 export interface ISocietyPosition {
   society: string;
@@ -12,10 +12,10 @@ export interface IUser {
   rollNo: string;
   email: string;
   role: Role;
+  hostel?: string;
   isSocietyLead?: boolean;
   society?: string;
   position?: string;
   allocatedRoom?: string;
   societyPositions?: ISocietyPosition[];
 }
-

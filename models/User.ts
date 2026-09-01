@@ -7,8 +7,13 @@ const userSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   role: {
     type: String,
-    enum: ["student", "warden", "ksac"],
+    enum: ["student", "warden", "ksac", "admin"],
     required: true,
+  },
+  hostel: {
+    type: String,
+    required: true,
+    default: "KP-7A",
   },
   isSocietyLead: { type: Boolean, default: false },
   society: { type: String },
@@ -27,6 +32,7 @@ const userSchema = new mongoose.Schema({
 
 // Optimization Indexes
 userSchema.index({ role: 1 });
+userSchema.index({ hostel: 1 });
 userSchema.index({ isSocietyLead: 1 });
 userSchema.index({ society: 1 });
 

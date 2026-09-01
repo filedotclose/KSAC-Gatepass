@@ -79,6 +79,18 @@ export async function POST(req: Request) {
 
     const response = NextResponse.json({
       message: "Login successful",
+      user: {
+        _id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        rollNo: user.rollNo,
+        role: user.role,
+        hostel: user.hostel || "KP-7A",
+        isSocietyLead: user.isSocietyLead || false,
+        society: user.society,
+        position: user.position,
+        allocatedRoom: user.allocatedRoom,
+      },
     });
 
     setRateLimitHeaders(response.headers, rateLimitResult);
