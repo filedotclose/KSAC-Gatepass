@@ -12,6 +12,7 @@ import {
   formatMinutesToTime,
   parseTimeToMinutes
 } from "@/lib/ksacSocieties";
+import { dispatchGateway, GATEWAY_OPCODES } from "@/lib/gatewayClient";
 
 interface Props {
   user: IUser;
@@ -97,40 +98,34 @@ export default function StudentView({ user }: Props) {
   const [submittingBooking, setSubmittingBooking] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const timeValidation = validateBookingTimeWindow(bookingStartTime, bookingEndTime);
 
-  const fetchPasses = async () => {
+  const fetchStudentData = async (isManualSync = false) => {
+    if (isManualSync) setIsSyncing(true);
     try {
-      const res = await fetch("/api/pass");
-      const data = await res.json();
-      setPasses(Array.isArray(data) ? data : []);
+      const res = await dispatchGateway(GATEWAY_OPCODES.FETCH_STUDENT_DASHBOARD);
+      if (res.ok && res.data) {
+        setPasses(Array.isArray(res.data.passes) ? res.data.passes : []);
+        if (user.isSocietyLead) {
+          setBookings(Array.isArray(res.data.bookings) ? res.data.bookings : []);
+        }
+      }
     } catch (err) {
-      console.error("Failed to fetch passes", err);
+      console.error("Failed to fetch student data via gateway", err);
     } finally {
       setLoadingPasses(false);
-    }
-  };
-
-  const fetchBookings = async () => {
-    try {
-      const res = await fetch("/api/room-booking");
-      const data = await res.json();
-      setBookings(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to fetch bookings", err);
-    } finally {
       setLoadingBookings(false);
+      if (isManualSync) {
+        // Ensure smooth visual spin feedback
+        setTimeout(() => setIsSyncing(false), 500);
+      }
     }
   };
 
   useEffect(() => {
-    fetchPasses();
-    if (user.isSocietyLead) {
-      fetchBookings();
-    } else {
-      setLoadingBookings(false);
-    }
+    fetchStudentData(false);
   }, [user.isSocietyLead]);
 
   // When society selection changes in room booking, update the allocated room suggestion
@@ -156,23 +151,18 @@ export default function StudentView({ user }: Props) {
         : society;
 
     try {
-      const res = await fetch("/api/pass/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          society: finalSociety,
-          reason,
-          requestedExtension: requestedExtension.trim(),
-        }),
+      const res = await dispatchGateway(GATEWAY_OPCODES.REQUEST_GATEPASS, {
+        society: finalSociety,
+        reason,
+        requestedExtension: requestedExtension.trim(),
       });
 
       if (res.ok) {
         setReason("");
         setCustomSociety("");
-        fetchPasses();
+        fetchStudentData(false);
       } else {
-        const data = await res.json();
-        alert(data.message || "Failed to request pass");
+        alert(res.message || "Failed to request pass");
       }
     } catch (err) {
       console.error("Pass request error", err);
@@ -193,29 +183,23 @@ export default function StudentView({ user }: Props) {
     setBookingSuccess("");
 
     try {
-      const res = await fetch("/api/room-booking/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          society: bookingSociety,
-          room: bookingRoom,
-          date: bookingDate,
-          startTime: bookingStartTime,
-          endTime: bookingEndTime,
-          timeslot: `${bookingStartTime} - ${bookingEndTime}`,
-          purpose: bookingPurpose,
-          attendeesEstimate: parseInt(attendeesEstimate, 10) || 15,
-        }),
+      const res = await dispatchGateway(GATEWAY_OPCODES.REQUEST_ROOM_BOOKING, {
+        society: bookingSociety,
+        room: bookingRoom,
+        date: bookingDate,
+        startTime: bookingStartTime,
+        endTime: bookingEndTime,
+        timeslot: `${bookingStartTime} - ${bookingEndTime}`,
+        purpose: bookingPurpose,
+        attendeesEstimate: parseInt(attendeesEstimate, 10) || 15,
       });
-
-      const data = await res.json();
 
       if (res.ok) {
         setBookingSuccess(`Room booking request for ${bookingRoom} on ${bookingDate} (${bookingStartTime} - ${bookingEndTime}) submitted! Waiting for KSAC Authority approval.`);
         setBookingPurpose("");
-        fetchBookings();
+        fetchStudentData(false);
       } else {
-        setBookingError(data.message || "Failed to submit room booking request.");
+        setBookingError(res.message || "Failed to submit room booking request.");
       }
     } catch (err: any) {
       setBookingError(err.message || "An unexpected error occurred.");
@@ -268,15 +252,12 @@ export default function StudentView({ user }: Props) {
         {/* Sync button */}
         <div className="flex items-center gap-3">
           <button
-            onClick={() => {
-              fetchPasses();
-              if (user.isSocietyLead) fetchBookings();
-            }}
-            disabled={loadingPasses || loadingBookings}
+            onClick={() => fetchStudentData(true)}
+            disabled={isSyncing}
             className="flex items-center gap-2 px-5 py-3 bg-white text-slate-700 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50 border border-slate-200 shadow-sm"
           >
             <svg
-              className={`w-3.5 h-3.5 text-emerald-600 ${loadingPasses || loadingBookings ? "animate-spin" : ""}`}
+              className={`w-3.5 h-3.5 text-emerald-600 transition-transform ${isSyncing ? "animate-spin" : ""}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -288,7 +269,7 @@ export default function StudentView({ user }: Props) {
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            Sync Data
+            <span>{isSyncing ? "Syncing..." : "Sync Data"}</span>
           </button>
         </div>
       </header>

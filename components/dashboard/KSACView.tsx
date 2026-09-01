@@ -3,6 +3,7 @@
 import { IUser } from "@/types/user";
 import { useEffect, useState } from "react";
 import { KSAC_SOCIETIES, KSAC_CENTRAL_ROOMS } from "@/lib/ksacSocieties";
+import { dispatchGateway, GATEWAY_OPCODES } from "@/lib/gatewayClient";
 
 interface Props {
   user: IUser;
@@ -29,15 +30,18 @@ export default function KSACView({ user }: Props) {
     setLoadingGate(true);
     try {
       const [passesRes, registryRes] = await Promise.all([
-        fetch("/api/pass"),
-        fetch("/api/pass/registry"),
+        dispatchGateway(GATEWAY_OPCODES.FETCH_KSAC_PASSES),
+        dispatchGateway(GATEWAY_OPCODES.FETCH_KSAC_REGISTRY),
       ]);
-      const [passesData, registryData] = await Promise.all([
-        passesRes.json(),
-        registryRes.json(),
-      ]);
-      setPasses(Array.isArray(passesData) ? passesData : []);
-      setRegistry(Array.isArray(registryData) ? registryData : []);
+      if (passesRes.ok && passesRes.data) {
+        setPasses(Array.isArray(passesRes.data.passes) ? passesRes.data.passes : []);
+        if (Array.isArray(passesRes.data.bookings)) {
+          setRoomBookings(passesRes.data.bookings);
+        }
+      }
+      if (registryRes.ok && Array.isArray(registryRes.data)) {
+        setRegistry(registryRes.data);
+      }
     } catch (err) {
       console.error("Failed to fetch KSAC gate data", err);
     } finally {
@@ -48,9 +52,10 @@ export default function KSACView({ user }: Props) {
   const fetchRoomBookings = async () => {
     setLoadingRooms(true);
     try {
-      const res = await fetch("/api/room-booking");
-      const data = await res.json();
-      setRoomBookings(Array.isArray(data) ? data : []);
+      const res = await dispatchGateway(GATEWAY_OPCODES.FETCH_KSAC_PASSES);
+      if (res.ok && res.data && Array.isArray(res.data.bookings)) {
+        setRoomBookings(res.data.bookings);
+      }
     } catch (err) {
       console.error("Failed to fetch room bookings", err);
     } finally {
@@ -65,17 +70,16 @@ export default function KSACView({ user }: Props) {
 
   const handlePassAction = async (endpoint: string, passId: string) => {
     try {
-      const res = await fetch(`/api/pass/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passId }),
+      const movementType = endpoint === "ksac-entry" ? "KSAC_ENTRY" : "KSAC_EXIT";
+      const res = await dispatchGateway(GATEWAY_OPCODES.RECORD_GATE_MOVEMENT, {
+        passId,
+        movementType,
       });
 
       if (res.ok) {
         fetchGateData();
       } else {
-        const data = await res.json();
-        alert(data.message || "Action failed");
+        alert(res.message || "Action failed");
       }
     } catch (err) {
       console.error("Pass action error", err);
@@ -90,24 +94,22 @@ export default function KSACView({ user }: Props) {
     setProcessingBookingId(bookingId);
     setActionAlert(null);
     try {
-      const res = await fetch("/api/room-booking/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, action, note }),
+      const res = await dispatchGateway(GATEWAY_OPCODES.ACTION_ROOM_BOOKING, {
+        bookingId,
+        action,
+        note,
       });
-
-      const data = await res.json();
 
       if (res.ok) {
         setActionAlert({
           type: "success",
-          message: data.message || `Booking ${action === "APPROVE" ? "approved" : "rejected"} successfully.`,
+          message: res.data?.message || `Booking ${action === "APPROVE" ? "approved" : "rejected"} successfully.`,
         });
         fetchRoomBookings();
       } else {
         setActionAlert({
           type: "error",
-          message: data.message || "Failed to process room booking action.",
+          message: res.message || "Failed to process room booking action.",
         });
       }
     } catch (err: any) {

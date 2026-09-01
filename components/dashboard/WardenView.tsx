@@ -2,6 +2,7 @@
 
 import { IUser } from "@/types/user";
 import { useEffect, useState } from "react";
+import { dispatchGateway, GATEWAY_OPCODES } from "@/lib/gatewayClient";
 
 interface Props {
   user: IUser;
@@ -13,9 +14,10 @@ export default function WardenView({ user }: Props) {
 
   const fetchPasses = async () => {
     try {
-      const res = await fetch("/api/pass");
-      const data = await res.json();
-      setPasses(Array.isArray(data) ? data : []);
+      const res = await dispatchGateway(GATEWAY_OPCODES.FETCH_WARDEN_PASSES);
+      if (res.ok && Array.isArray(res.data)) {
+        setPasses(res.data);
+      }
     } catch (err) {
       console.error("Failed to fetch passes", err);
     } finally {
@@ -29,17 +31,18 @@ export default function WardenView({ user }: Props) {
 
   const handleAction = async (endpoint: string, passId: string) => {
     try {
-      const res = await fetch(`/api/pass/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passId }),
-      });
+      let res;
+      if (endpoint === "approve") {
+        res = await dispatchGateway(GATEWAY_OPCODES.ACTION_PASS_APPROVE, { passId });
+      } else {
+        const movementType = endpoint === "hostel-exit" ? "HOSTEL_EXIT" : "HOSTEL_ENTRY";
+        res = await dispatchGateway(GATEWAY_OPCODES.RECORD_GATE_MOVEMENT, { passId, movementType });
+      }
 
       if (res.ok) {
         fetchPasses();
       } else {
-        const data = await res.json();
-        alert(data.message || "Action failed");
+        alert(res.message || "Action failed");
       }
     } catch (err) {
       console.error("Action failed", err);
