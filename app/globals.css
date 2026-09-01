@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, blinkmacsystemfont, "Segoe UI", roboto, "Helvetica Neue", arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+@layer base {
+  body {
+    @apply text-slate-900 antialiased font-sans transition-colors duration-500 bg-[#f7fbf8];
+    background-image:
+      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(5, 150, 105, 0.12) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(20, 184, 166, 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(4, 120, 87, 0.08) 0px, transparent 50%);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+
+  /* Define glass as a reusable property set using standard CSS variables or local classes */
+  .glass {
+    @apply bg-white/70 backdrop-blur-2xl border border-white/50;
+    box-shadow: 0 20px 50px rgba(16, 185, 129, 0.06);
+  }
+
+  .floating-nav-container {
+    @apply fixed top-4 sm:top-10 left-0 right-0 z-50 flex justify-center px-4 sm:px-8;
+  }
+
+  .floating-nav {
+    @apply w-full max-w-7xl rounded-2xl sm:rounded-[3rem] px-4 sm:px-10 h-16 sm:h-24 flex items-center justify-between transition-all duration-700;
+    @apply bg-white/70 backdrop-blur-2xl border border-white/50;
+    box-shadow: 0 20px 50px rgba(16, 185, 129, 0.08);
+    outline: 1px solid rgba(0, 0, 0, 0.03);
+  }
+
+  .gradient-text {
+    @apply text-transparent bg-clip-text bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 font-extrabold;
+  }
+
+  .animate-entrance {
+    animation: flowIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes flowIn {
+    from {
+      opacity: 0;
+      transform: translateY(24px) scale(0.99);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full hover:bg-slate-300;
+}
