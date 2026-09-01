@@ -99,7 +99,7 @@ export default function LoginPage() {
               </div>
               <input
                 type="email"
-                placeholder="23051959@kiit.ac.in or ksac@kiit.ac.in"
+                placeholder="2XXXXXX@kiit.ac.in"
                 className="w-full bg-slate-50 border border-slate-100 p-4.5 rounded-3xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-medium text-slate-700 placeholder:text-slate-300 text-sm"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
