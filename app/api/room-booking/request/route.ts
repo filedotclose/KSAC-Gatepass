@@ -42,6 +42,34 @@ export async function POST(req: Request) {
       );
     }
 
+    // Build the authorized societies and designations for this user from authentic DB profile
+    const authorizedMap = new Map<string, { society: string; position: string }>();
+
+    if (user.societyPositions && Array.isArray(user.societyPositions) && user.societyPositions.length > 0) {
+      for (const sp of user.societyPositions) {
+        if (sp.society) {
+          authorizedMap.set(sp.society.trim().toLowerCase(), {
+            society: sp.society.trim(),
+            position: sp.position || "Office Bearer",
+          });
+        }
+      }
+    }
+
+    if (user.society) {
+      authorizedMap.set(user.society.trim().toLowerCase(), {
+        society: user.society.trim(),
+        position: user.position || "Office Bearer",
+      });
+    }
+
+    if (authorizedMap.size === 0) {
+      return NextResponse.json(
+        { message: "Access Denied: No authorized society assigned to your leadership profile." },
+        { status: 403 }
+      );
+    }
+
     const bodyResult = await parseAndValidateBody<{
       society?: unknown;
       room?: unknown;
@@ -70,7 +98,7 @@ export async function POST(req: Request) {
     }
 
     // Sanitize string inputs
-    const societyCheck = sanitizeString(society, 100, "Society");
+    const reqSocCheck = sanitizeString(society, 100, "Society");
     const roomCheck = sanitizeString(room, 100, "Room");
     const dateCheck = sanitizeString(date, 20, "Date");
     const startCheck = sanitizeString(rawStartTime, 20, "Start Time");
@@ -78,7 +106,6 @@ export async function POST(req: Request) {
     const purposeCheck = sanitizeString(purpose, 500, "Purpose");
 
     if (
-      !societyCheck.valid || !societyCheck.value ||
       !roomCheck.valid || !roomCheck.value ||
       !dateCheck.valid || !dateCheck.value ||
       !startCheck.valid || !startCheck.value ||
@@ -86,16 +113,42 @@ export async function POST(req: Request) {
       !purposeCheck.valid || !purposeCheck.value
     ) {
       return NextResponse.json(
-        { message: "Missing or invalid required booking details (society, room, date, startTime, endTime, purpose)." },
+        { message: "Missing or invalid required booking details (room, date, startTime, endTime, purpose)." },
         { status: 400 }
       );
     }
 
+    // Designation and Society Enforcement:
+    // If a society was requested, it MUST strictly match one of the user's authorized societies
+    const firstAuth = authorizedMap.values().next().value;
+    if (!firstAuth) {
+      return NextResponse.json(
+        { message: "Access Denied: No authorized society assigned to your leadership profile." },
+        { status: 403 }
+      );
+    }
+
+    let targetAuth: { society: string; position: string } = firstAuth;
+    if (reqSocCheck.valid && reqSocCheck.value) {
+      const matched = authorizedMap.get(reqSocCheck.value.trim().toLowerCase());
+      if (!matched) {
+        const allowedList = Array.from(authorizedMap.values()).map((v) => `"${v.society}" (${v.position})`).join(", ");
+        return NextResponse.json(
+          {
+            message: `Access Denied: You are only authorized to submit room bookings for your designated society (${allowedList}). You cannot submit bookings for other societies.`,
+          },
+          { status: 403 }
+        );
+      }
+      targetAuth = matched;
+    }
+
+    const finalSociety = targetAuth.society;
+    const finalPosition = targetAuth.position;
     const finalDate = dateCheck.value;
     const finalStartTime = startCheck.value;
     const finalEndTime = endCheck.value;
     const finalRoom = roomCheck.value;
-    const finalSociety = societyCheck.value;
     const finalPurpose = purposeCheck.value;
 
     // Validate date format (YYYY-MM-DD)
@@ -158,13 +211,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create the room booking
+    // Create the room booking with strictly authenticated society & designation
     const newBooking = await RoomBooking.create({
       studentId: user._id,
       studentName: user.name,
       studentRollNo: user.rollNo,
-      society: finalSociety || user.society || "General KSAC Society",
-      position: user.position || "Society Office Bearer",
+      society: finalSociety,
+      position: finalPosition,
       room: finalRoom,
       date: finalDate,
       startTime: finalStartTime,

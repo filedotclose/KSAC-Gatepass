@@ -1,7 +1,7 @@
 "use client";
 
 import { IUser } from "@/types/user";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   KSAC_SOCIETIES,
   KSAC_CENTRAL_ROOMS,
@@ -64,10 +64,25 @@ export default function StudentView({ user }: Props) {
   const [loadingPasses, setLoadingPasses] = useState(true);
   const [submittingPass, setSubmittingPass] = useState(false);
 
+  // Derive authorized leadership societies from authentic profile
+  const authorizedSocieties = useMemo(() => {
+    if (user.societyPositions && user.societyPositions.length > 0) {
+      return user.societyPositions;
+    }
+    if (user.society) {
+      return [{ society: user.society, position: user.position || "Office Bearer" }];
+    }
+    return [];
+  }, [user]);
+
+  const initialSociety = authorizedSocieties[0]?.society || user.society || "Kalliope";
+
   // Room Booking states
   const [bookings, setBookings] = useState<any[]>([]);
-  const [bookingSociety, setBookingSociety] = useState(user.society || "KORUS");
-  const [bookingRoom, setBookingRoom] = useState(user.allocatedRoom || getAllocatedRoomForSociety(user.society || "KORUS"));
+  const [bookingSociety, setBookingSociety] = useState(initialSociety);
+  const [bookingRoom, setBookingRoom] = useState(
+    user.allocatedRoom || getAllocatedRoomForSociety(initialSociety)
+  );
   const [bookingDate, setBookingDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split("T")[0];
@@ -669,31 +684,49 @@ export default function StudentView({ user }: Props) {
                   )}
 
                   <form onSubmit={handleRoomBookingRequest} className="space-y-5">
-                    {/* Society selection */}
+                    {/* Society selection (Strictly locked to authentic designation) */}
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
-                        Society
-                      </label>
-                      <select
-                        value={bookingSociety}
-                        onChange={(e) => handleSocietyChange(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 text-slate-700 text-xs font-bold"
-                      >
-                        {user.societyPositions && user.societyPositions.length > 0 ? (
-                          user.societyPositions.map((sp) => (
+                      <div className="flex justify-between items-center ml-1">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                          Designated Society
+                        </label>
+                        <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                          Official Designation
+                        </span>
+                      </div>
+
+                      {authorizedSocieties.length > 1 ? (
+                        <select
+                          value={bookingSociety}
+                          onChange={(e) => handleSocietyChange(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 text-slate-800 text-xs font-bold"
+                        >
+                          {authorizedSocieties.map((sp) => (
                             <option key={sp.society} value={sp.society}>
                               {sp.society} ({sp.position})
                             </option>
-                          ))
-                        ) : (
-                          <option value={user.society || "KORUS"}>{user.society || "KORUS"}</option>
-                        )}
-                        {KSAC_SOCIETIES.map((s) => (
-                          <option key={s.name} value={s.name}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="w-full bg-slate-50 border border-slate-200/80 p-4 rounded-2xl flex items-center justify-between shadow-inner">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-emerald-200">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 2a1 1 0 01.756.344l2.4 2.8 3.65.53a1 1 0 01.554 1.705l-2.64 2.573.623 3.635a1 1 0 01-1.45 1.054L10 12.93l-3.263 1.716a1 1 0 01-1.45-1.054l.623-3.635-2.64-2.573a1 1 0 01.554-1.705l3.65-.53 2.4-2.8A1 1 0 0110 2z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-slate-800">{authorizedSocieties[0]?.society || user.society}</p>
+                              <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                                {authorizedSocieties[0]?.position || user.position || "Office Bearer"} • Verified Designation
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[9px] font-black uppercase bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg">
+                            Locked
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Room selection */}
@@ -702,7 +735,7 @@ export default function StudentView({ user }: Props) {
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                           Target KSAC Room
                         </label>
-                        <span className="text-[9px] font-bold text-emerald-700">Allocated for Society</span>
+                        <span className="text-[9px] font-bold text-emerald-700">Allocated or Central Spaces</span>
                       </div>
                       <select
                         value={bookingRoom}
@@ -710,16 +743,11 @@ export default function StudentView({ user }: Props) {
                         className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 text-slate-700 text-xs font-bold"
                       >
                         <option value={getAllocatedRoomForSociety(bookingSociety)}>
-                          {getAllocatedRoomForSociety(bookingSociety)} (Allocated)
+                          {getAllocatedRoomForSociety(bookingSociety)} (Allocated for {bookingSociety})
                         </option>
                         {KSAC_CENTRAL_ROOMS.map((cr) => (
                           <option key={cr} value={cr}>
                             {cr}
-                          </option>
-                        ))}
-                        {KSAC_SOCIETIES.map((s) => (
-                          <option key={s.room} value={s.room}>
-                            {s.room}
                           </option>
                         ))}
                       </select>
