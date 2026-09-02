@@ -2,6 +2,7 @@
 
 import { IUser } from "@/types/user";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { dispatchGateway, GATEWAY_OPCODES } from "@/lib/gatewayClient";
 import { KSAC_SOCIETIES, KSAC_CENTRAL_ROOMS, getAllocatedRoomForSociety } from "@/lib/ksacSocieties";
 
@@ -29,6 +30,7 @@ const COMMON_HOSTELS = [
 ];
 
 export default function AdminView({ user }: Props) {
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"users" | "passes" | "rooms" | "logs">("users");
 
   // Data states
@@ -53,6 +55,22 @@ export default function AdminView({ user }: Props) {
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [actionAlert, setActionAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock document body scroll when modal is active
+  useEffect(() => {
+    if (showAddUserModal || editingUser) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [showAddUserModal, editingUser]);
 
   // New User Form State
   const [newUserName, setNewUserName] = useState("");
@@ -754,71 +772,93 @@ export default function AdminView({ user }: Props) {
       )}
 
       {/* MODAL: ADD USER / STUDENT */}
-      {showAddUserModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-in zoom-in max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-              <h3 className="text-lg font-black text-slate-800">Add New Student / Authority</h3>
-              <button onClick={() => setShowAddUserModal(false)} className="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+      {mounted && showAddUserModal && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3.5 sm:p-6 md:p-8 overflow-y-auto animate-in fade-in duration-200"
+          onClick={() => setShowAddUserModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl sm:rounded-[2.5rem] max-w-lg w-full p-5 sm:p-7 space-y-4 shadow-2xl border border-slate-100/80 relative my-auto animate-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Add Student / Authority</h3>
+                  <p className="text-[11px] font-bold text-slate-400">Create a verified university account</p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowAddUserModal(false)} 
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center font-bold text-sm transition-colors"
+              >
+                ✕
+              </button>
             </div>
 
             <form onSubmit={handleCreateUser} className="space-y-3.5">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Full Name</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Full Name</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Rahul Sharma"
                     value={newUserName}
                     onChange={(e) => setNewUserName(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Roll No</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Roll No</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. 23051999"
                     value={newUserRoll}
                     onChange={(e) => setNewUserRoll(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">KIIT Email</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">KIIT Email</label>
                   <input
                     type="email"
                     required
                     placeholder="23051999@kiit.ac.in"
                     value={newUserEmail}
                     onChange={(e) => setNewUserEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Password</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Password</label>
                   <input
                     type="password"
                     required
                     value={newUserPassword}
                     onChange={(e) => setNewUserPassword(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Role</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Role</label>
                   <select
                     value={newUserRole}
                     onChange={(e) => setNewUserRole(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold text-slate-700"
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
                   >
                     <option value="student">Student</option>
                     <option value="warden">Warden</option>
@@ -827,11 +867,11 @@ export default function AdminView({ user }: Props) {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Resident Hostel</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Resident Hostel</label>
                   <select
                     value={newUserHostel}
                     onChange={(e) => setNewUserHostel(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold text-slate-700"
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
                   >
                     <optgroup label="General / Day Scholars">
                       <option value="N/A">N/A (Day Scholar / Day Boarder)</option>
@@ -852,29 +892,29 @@ export default function AdminView({ user }: Props) {
               </div>
 
               {/* Society Lead Room Booking Privileges */}
-              <div className="p-3 bg-purple-50/60 rounded-2xl border border-purple-100 space-y-3">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="p-3.5 bg-purple-50/70 rounded-2xl border border-purple-100 space-y-3">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={newUserIsLead}
                     onChange={(e) => setNewUserIsLead(e.target.checked)}
-                    className="w-4 h-4 text-purple-600 rounded"
+                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
                   />
-                  <span className="text-xs font-black text-purple-900 uppercase">Grant Society Room Booking Privileges</span>
+                  <span className="text-xs font-black text-purple-950 uppercase tracking-wide">Grant Society Room Booking Privileges</span>
                 </label>
 
                 {newUserIsLead && (
-                  <div className="space-y-2 pt-1">
-                    <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2.5 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
-                        <span className="text-[9px] font-black uppercase text-slate-400">Society</span>
+                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-1">Society</span>
                         <select
                           value={newUserSociety}
                           onChange={(e) => {
                             setNewUserSociety(e.target.value);
                             setNewUserAllocatedRoom(getAllocatedRoomForSociety(e.target.value));
                           }}
-                          className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs font-bold"
+                          className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-bold"
                         >
                           {KSAC_SOCIETIES.map((s) => (
                             <option key={s.name} value={s.name}>{s.name}</option>
@@ -882,11 +922,11 @@ export default function AdminView({ user }: Props) {
                         </select>
                       </div>
                       <div>
-                        <span className="text-[9px] font-black uppercase text-slate-400">Designation</span>
+                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-1">Designation</span>
                         <select
                           value={newUserPosition}
                           onChange={(e) => setNewUserPosition(e.target.value)}
-                          className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs font-bold"
+                          className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-bold"
                         >
                           <option value="President">President</option>
                           <option value="Vice-President">Vice-President</option>
@@ -894,65 +934,88 @@ export default function AdminView({ user }: Props) {
                       </div>
                     </div>
                     <div>
-                      <span className="text-[9px] font-black uppercase text-slate-400">Allocated Room</span>
+                      <span className="text-[9px] font-black uppercase text-slate-400 block mb-1">Allocated Room</span>
                       <input
                         type="text"
                         value={newUserAllocatedRoom}
                         onChange={(e) => setNewUserAllocatedRoom(e.target.value)}
-                        className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs font-semibold"
+                        className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-semibold"
                       />
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddUserModal(false)}
-                  className="w-1/2 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs"
+                  className="w-1/2 py-2.5 sm:py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingUser}
-                  className="w-1/2 py-2.5 bg-purple-700 text-white rounded-xl font-bold text-xs hover:bg-purple-800"
+                  className="w-1/2 py-2.5 sm:py-3 bg-purple-700 text-white rounded-xl font-black text-xs hover:bg-purple-800 transition-all active:scale-95 shadow-md shadow-purple-200 disabled:opacity-50"
                 >
                   {submittingUser ? "Creating..." : "Save User"}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL: EDIT USER & PRIVILEGES */}
-      {editingUser && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-in zoom-in max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-              <h3 className="text-lg font-black text-slate-800">Edit User & Privileges</h3>
-              <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+      {mounted && editingUser && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3.5 sm:p-6 md:p-8 overflow-y-auto animate-in fade-in duration-200"
+          onClick={() => setEditingUser(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl sm:rounded-[2.5rem] max-w-lg w-full p-5 sm:p-7 space-y-4 shadow-2xl border border-slate-100/80 relative my-auto animate-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Edit User & Privileges</h3>
+                  <p className="text-[11px] font-bold text-slate-400">{editingUser.name} • {editingUser.rollNo || "Admin/Authority"}</p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setEditingUser(null)} 
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center font-bold text-sm transition-colors"
+              >
+                ✕
+              </button>
             </div>
 
             <form onSubmit={handleUpdateUser} className="space-y-3.5">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Name</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Name</label>
                   <input
                     type="text"
                     value={editingUser.name}
                     onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold"
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Hostel</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Resident Hostel</label>
                   <select
                     value={editingUser.hostel || "KP-7A"}
                     onChange={(e) => setEditingUser({ ...editingUser, hostel: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
                   >
                     <optgroup label="General / Day Scholars">
                       <option value="N/A">N/A (Day Scholar / Day Boarder)</option>
@@ -972,13 +1035,13 @@ export default function AdminView({ user }: Props) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Role</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Role</label>
                   <select
                     value={editingUser.role}
                     onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
                   >
                     <option value="student">Student</option>
                     <option value="warden">Warden</option>
@@ -987,33 +1050,33 @@ export default function AdminView({ user }: Props) {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Email</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Email</label>
                   <input
                     type="email"
                     value={editingUser.email}
                     onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold"
+                    className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all"
                   />
                 </div>
               </div>
 
               {/* Room Booking Privileges */}
-              <div className="p-3 bg-purple-50/60 rounded-2xl border border-purple-100 space-y-3">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="p-3.5 bg-purple-50/70 rounded-2xl border border-purple-100 space-y-3">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={editingUser.isSocietyLead || false}
                     onChange={(e) => setEditingUser({ ...editingUser, isSocietyLead: e.target.checked })}
-                    className="w-4 h-4 text-purple-600 rounded"
+                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
                   />
-                  <span className="text-xs font-black text-purple-900 uppercase">Room Booking Access</span>
+                  <span className="text-xs font-black text-purple-950 uppercase tracking-wide">Room Booking Access</span>
                 </label>
 
                 {editingUser.isSocietyLead && (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2.5 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
-                        <span className="text-[9px] font-black uppercase text-slate-400">Society</span>
+                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-1">Society</span>
                         <select
                           value={editingUser.society || KSAC_SOCIETIES[0]?.name}
                           onChange={(e) => setEditingUser({
@@ -1021,7 +1084,7 @@ export default function AdminView({ user }: Props) {
                             society: e.target.value,
                             allocatedRoom: getAllocatedRoomForSociety(e.target.value),
                           })}
-                          className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs font-bold"
+                          className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-bold"
                         >
                           {KSAC_SOCIETIES.map((s) => (
                             <option key={s.name} value={s.name}>{s.name}</option>
@@ -1029,11 +1092,11 @@ export default function AdminView({ user }: Props) {
                         </select>
                       </div>
                       <div>
-                        <span className="text-[9px] font-black uppercase text-slate-400">Position</span>
+                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-1">Position</span>
                         <select
                           value={editingUser.position || "President"}
                           onChange={(e) => setEditingUser({ ...editingUser, position: e.target.value })}
-                          className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs font-bold"
+                          className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-bold"
                         >
                           <option value="President">President</option>
                           <option value="Vice-President">Vice-President</option>
@@ -1041,37 +1104,38 @@ export default function AdminView({ user }: Props) {
                       </div>
                     </div>
                     <div>
-                      <span className="text-[9px] font-black uppercase text-slate-400">Allocated Room</span>
+                      <span className="text-[9px] font-black uppercase text-slate-400 block mb-1">Allocated Room</span>
                       <input
                         type="text"
                         value={editingUser.allocatedRoom || ""}
                         onChange={(e) => setEditingUser({ ...editingUser, allocatedRoom: e.target.value })}
-                        className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs font-semibold"
+                        className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-semibold"
                       />
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="w-1/2 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs"
+                  className="w-1/2 py-2.5 sm:py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingUser}
-                  className="w-1/2 py-2.5 bg-purple-700 text-white rounded-xl font-bold text-xs hover:bg-purple-800"
+                  className="w-1/2 py-2.5 sm:py-3 bg-purple-700 text-white rounded-xl font-black text-xs hover:bg-purple-800 transition-all active:scale-95 shadow-md shadow-purple-200 disabled:opacity-50"
                 >
                   {submittingUser ? "Updating..." : "Save Changes"}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
