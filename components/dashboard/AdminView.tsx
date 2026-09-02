@@ -9,9 +9,23 @@ interface Props {
   user: IUser;
 }
 
+const KP_BOYS_HOSTELS = [
+  "KP-1", "KP-2", "KP-3", "KP-4", "KP-5", "KP-6", "KP-7A", "KP-7B", "KP-8", "KP-9", "KP-10", "KP-11", "KP-12", "KP-14", "KP-15"
+];
+
+const QC_GIRLS_HOSTELS = [
+  "QC-1", "QC-2", "QC-3", "QC-4", "QC-5", "QC-6", "QC-7", "QC-8", "QC-9", "QC-10", "QC-11"
+];
+
+const SPECIAL_HOSTELS = [
+  "N/A", "International Hostel"
+];
+
 const COMMON_HOSTELS = [
-  "KP-7A", "KP-7B", "KP-6", "KP-10", "KP-14", "KP-15", "KP-1", "KP-2", "KP-3", "KP-4", "KP-5",
-  "QC-1", "QC-2", "QC-3", "QC-4", "QC-5", "QC-6", "QC-7", "QC-8", "QC-11", "International Hostel"
+  "N/A",
+  ...KP_BOYS_HOSTELS,
+  ...QC_GIRLS_HOSTELS,
+  "International Hostel"
 ];
 
 export default function AdminView({ user }: Props) {
@@ -416,9 +430,20 @@ export default function AdminView({ user }: Props) {
                 className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
               >
                 <option value="ALL">All Hostels</option>
-                {COMMON_HOSTELS.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
+                <optgroup label="General / Day Scholars">
+                  <option value="N/A">N/A (Day Scholar / Day Boarder)</option>
+                  <option value="International Hostel">International Hostel</option>
+                </optgroup>
+                <optgroup label="Boys Hostels (King's Palace - KP)">
+                  {KP_BOYS_HOSTELS.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Girls Hostels (Queen's Castle - QC)">
+                  {QC_GIRLS_HOSTELS.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </optgroup>
               </select>
             </div>
           </div>
@@ -808,9 +833,20 @@ export default function AdminView({ user }: Props) {
                     onChange={(e) => setNewUserHostel(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold text-slate-700"
                   >
-                    {COMMON_HOSTELS.map((h) => (
-                      <option key={h} value={h}>{h}</option>
-                    ))}
+                    <optgroup label="General / Day Scholars">
+                      <option value="N/A">N/A (Day Scholar / Day Boarder)</option>
+                      <option value="International Hostel">International Hostel</option>
+                    </optgroup>
+                    <optgroup label="Boys Hostels (King's Palace - KP)">
+                      {KP_BOYS_HOSTELS.map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Girls Hostels (Queen's Castle - QC)">
+                      {QC_GIRLS_HOSTELS.map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
               </div>
@@ -918,9 +954,20 @@ export default function AdminView({ user }: Props) {
                     onChange={(e) => setEditingUser({ ...editingUser, hostel: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold"
                   >
-                    {COMMON_HOSTELS.map((h) => (
-                      <option key={h} value={h}>{h}</option>
-                    ))}
+                    <optgroup label="General / Day Scholars">
+                      <option value="N/A">N/A (Day Scholar / Day Boarder)</option>
+                      <option value="International Hostel">International Hostel</option>
+                    </optgroup>
+                    <optgroup label="Boys Hostels (King's Palace - KP)">
+                      {KP_BOYS_HOSTELS.map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Girls Hostels (Queen's Castle - QC)">
+                      {QC_GIRLS_HOSTELS.map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
               </div>
