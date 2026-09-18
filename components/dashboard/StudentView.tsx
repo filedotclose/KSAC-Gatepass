@@ -297,9 +297,6 @@ export default function StudentView({ user }: Props) {
             <span className="inline sm:hidden">GatePass</span>
             <span className="hidden sm:inline">Hostel & KSAC GatePass</span>
           </span>
-          {activePass && (
-            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping ml-0.5"></span>
-          )}
         </button>
 
         <button
@@ -352,10 +349,6 @@ export default function StudentView({ user }: Props) {
                 <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-900 via-slate-950 to-emerald-950 rounded-2xl sm:rounded-3xl space-y-4 sm:space-y-5 shadow-xl text-white border border-emerald-500/20">
                   <div className="flex items-center justify-between pb-3 border-b border-white/10">
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="relative">
-                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-emerald-400 rounded-full animate-ping absolute"></div>
-                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-emerald-500 rounded-full relative border-2 border-slate-900"></div>
-                      </div>
                       <span className="font-black text-[10px] sm:text-xs uppercase tracking-wider sm:tracking-widest text-emerald-300">
                         Active Pass In Transit
                       </span>

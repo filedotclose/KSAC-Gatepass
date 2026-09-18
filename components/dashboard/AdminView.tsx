@@ -752,7 +752,6 @@ export default function AdminView({ user }: Props) {
             {activityLogs.map((log) => (
               <div key={log._id} className="p-3 bg-slate-50 rounded-xl flex items-center justify-between text-xs border border-slate-100">
                 <div className="flex items-center gap-2.5">
-                  <span className={`w-2 h-2 rounded-full ${log.activityType.includes("ENTRY") ? "bg-emerald-500" : "bg-purple-500"}`} />
                   <span className="font-black text-slate-800">{log.studentId?.name || "Student"}</span>
                   <span className="text-[10px] font-bold text-slate-400">({log.studentId?.rollNo})</span>
                   <span className="text-[10px] font-black text-purple-700 uppercase bg-purple-50 px-2 py-0.5 rounded">

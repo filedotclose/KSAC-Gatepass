@@ -51,6 +51,7 @@ next-env.d.ts
 # presentation & showcase artifacts
 *.pptx
 *.ppt
+*.png
 public/presentation.html
 public/screenshots/
 presentation.html

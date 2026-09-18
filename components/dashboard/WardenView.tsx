@@ -215,7 +215,6 @@ export default function WardenView({ user }: Props) {
       <section className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100 shadow-xs overflow-hidden">
         <div className="px-5 sm:px-8 py-4 sm:py-5 border-b border-slate-100 flex justify-between items-center bg-emerald-50/40">
           <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
             <h2 className="text-base sm:text-xl font-black text-slate-800 tracking-tight">
               Step 4 & 5: Students Outside at KSAC ({activeOutsidePasses.length})
             </h2>

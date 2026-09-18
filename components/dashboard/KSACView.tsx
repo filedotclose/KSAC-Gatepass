@@ -367,7 +367,6 @@ export default function KSACView({ user }: Props) {
           <section className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100 shadow-xs overflow-hidden">
             <div className="px-5 sm:px-8 py-4 sm:py-5 border-b border-slate-100 flex justify-between items-center bg-amber-50/40">
               <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
                 <h2 className="text-base sm:text-xl font-black text-slate-800 tracking-tight">
                   Step 2 & 3: Pending In-Time Extension Requests ({pendingVerificationPasses.length})
                 </h2>
@@ -455,7 +454,6 @@ export default function KSACView({ user }: Props) {
                   <div key={p._id} className="p-4 flex items-center justify-between hover:bg-slate-50/60 transition-colors">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="font-black text-slate-800 text-xs">{p.studentId?.name}</span>
                         <span className="text-[10px] text-slate-400 font-bold">({p.studentId?.rollNo})</span>
                       </div>

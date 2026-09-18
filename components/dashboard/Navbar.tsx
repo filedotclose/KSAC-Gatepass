@@ -37,10 +37,6 @@ export default function Navbar() {
             </div>
           </div>
 
-          <div className="hidden lg:flex items-center gap-2.5 px-4 py-2 bg-slate-50/80 rounded-2xl border border-slate-100">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Sync Active</span>
-          </div>
         </div>
 
         <button
