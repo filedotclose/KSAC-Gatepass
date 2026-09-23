@@ -230,6 +230,8 @@ export default function DeanView({ user }: Props) {
     }
   };
 
+  const [qrLink, setQrLink] = useState<string>("");
+
   const handleGenerateQR = async () => {
     if (!activeSession) return;
     if (!activeSession.loginLocked) {
@@ -239,14 +241,15 @@ export default function DeanView({ user }: Props) {
     setQrLoading(true);
     const res = await dispatchGateway(GATEWAY_OPCODES.GENERATE_QR_TOKEN, { sessionId: activeSession._id });
     if (res.ok) {
-      const payload = JSON.stringify({
-        sid: res.data?.sessionId,
-        seq: res.data?.sequence,
-        tok: res.data?.token,
-        ts: res.data?.tsBucket
-      });
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const attendanceUrl = `${origin}/attendance?sid=${res.data?.sessionId}&seq=${res.data?.sequence}&tok=${res.data?.token}&ts=${res.data?.tsBucket}`;
       setQrTokenData(res.data);
-      const url = await QRCode.toDataURL(payload, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
+      setQrLink(attendanceUrl);
+      const url = await QRCode.toDataURL(attendanceUrl, {
+        width: 420,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' }
+      });
       setQrDataUrl(url);
     }
     setQrLoading(false);
@@ -823,6 +826,29 @@ export default function DeanView({ user }: Props) {
                         <div className="w-2 h-2 rounded-full bg-red-500 animate-ping"></div>
                         <span className="text-slate-500 font-mono text-xs">SEQ: {qrTokenData?.sequence}</span>
                       </div>
+                      {qrLink && (
+                        <div className="mt-4 pt-3 border-t border-slate-800 text-left max-w-sm mx-auto">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Direct Link (Encodes into QR):</p>
+                          <div className="flex items-center gap-2 bg-slate-950/80 p-2 rounded-xl border border-slate-800">
+                            <input
+                              type="text"
+                              readOnly
+                              value={qrLink}
+                              className="bg-transparent text-indigo-300 font-mono text-[10px] truncate w-full outline-none"
+                            />
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(qrLink);
+                                setActionAlert({ type: "success", message: "Attendance link copied to clipboard!" });
+                              }}
+                              className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[9px] font-bold uppercase shrink-0 transition-colors"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                          <p className="text-[9px] text-slate-500 mt-1">Students can scan this directly with any phone camera or via the Student Portal.</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (

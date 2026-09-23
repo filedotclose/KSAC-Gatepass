@@ -157,8 +157,32 @@ export default function StudentView({ user }: Props) {
     scanner.render(
       async (decodedText) => {
         try {
-          const payload = JSON.parse(decodedText);
-          if (payload.sid && payload.tok) {
+          let payload: any = null;
+
+          // 1. Try parsing as URL (e.g., https://.../attendance?sid=...&seq=...&tok=...&ts=...)
+          try {
+            if (decodedText.includes("sid=") && decodedText.includes("tok=")) {
+              const url = decodedText.startsWith("http")
+                ? new URL(decodedText)
+                : new URL(decodedText, window.location.origin);
+              const sid = url.searchParams.get("sid");
+              const seq = parseInt(url.searchParams.get("seq") || "0", 10);
+              const tok = url.searchParams.get("tok");
+              const ts = parseInt(url.searchParams.get("ts") || "0", 10);
+              if (sid && tok) {
+                payload = { sid, seq, tok, ts };
+              }
+            }
+          } catch {}
+
+          // 2. Fallback to raw JSON
+          if (!payload) {
+            try {
+              payload = JSON.parse(decodedText);
+            } catch {}
+          }
+
+          if (payload && payload.sid && payload.tok) {
             scanner.clear();
             setShowScanner(false);
             
@@ -176,9 +200,11 @@ export default function StudentView({ user }: Props) {
             } else {
               setAttendanceMessage({ type: "error", text: res.message || "Invalid or expired QR code" });
             }
+          } else {
+            console.error("Invalid QR format");
           }
         } catch (e) {
-          console.error("Invalid QR format");
+          console.error("Invalid QR format", e);
         }
       },
       (error) => {
