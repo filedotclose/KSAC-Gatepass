@@ -23,10 +23,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Access control: Only KSAC Authority can approve / reject room bookings
-    if (user.role !== "ksac") {
+    // Access control: Only KSAC Authority or Dean can approve / reject room bookings
+    if (user.role !== "ksac" && user.role !== "dean" && user.role !== "admin") {
       return NextResponse.json(
-        { message: "Access restricted: Only KSAC Authority desk can approve or reject room bookings." },
+        { message: "Access restricted: Only KSAC Authority desk or Dean can approve or reject room bookings." },
         { status: 403 }
       );
     }

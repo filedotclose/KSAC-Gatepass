@@ -38,8 +38,8 @@ export async function GET(req: Request) {
       query.studentId = user._id;
       if (statusFilter && statusFilter !== "ALL") query.status = statusFilter;
       if (dateFilter) query.date = dateFilter;
-    } else if (user.role === "ksac") {
-      // KSAC Authority can view all bookings with filters
+    } else if (user.role === "ksac" || user.role === "dean") {
+      // KSAC Authority and Dean can view all bookings with filters
       if (statusFilter && statusFilter !== "ALL") query.status = statusFilter;
       if (dateFilter) query.date = dateFilter;
       if (roomFilter && roomFilter !== "ALL") query.room = roomFilter;

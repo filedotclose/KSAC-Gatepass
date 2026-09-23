@@ -4,6 +4,7 @@ import StudentView from "@/components/dashboard/StudentView";
 import WardenView from "@/components/dashboard/WardenView";
 import KSACView from "@/components/dashboard/KSACView";
 import AdminView from "@/components/dashboard/AdminView";
+import DeanView from "@/components/dashboard/DeanView";
 import Navbar from "@/components/dashboard/Navbar";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,9 @@ export default async function Dashboard() {
       break;
     case "ksac":
       roleView = <KSACView user={currentUser} />;
+      break;
+    case "dean":
+      roleView = <DeanView user={currentUser} />;
       break;
     case "admin":
       roleView = <AdminView user={currentUser} />;

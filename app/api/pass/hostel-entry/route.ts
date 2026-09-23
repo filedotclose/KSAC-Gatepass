@@ -20,8 +20,8 @@ export async function POST(req: Request) {
     }
 
     const user = await getUserFromToken();
-    if (!user || user.role !== "warden") {
-      return NextResponse.json({ message: "Unauthorized: Warden role required." }, { status: 401 });
+    if (!user || (user.role !== "warden" && user.role !== "admin")) {
+      return NextResponse.json({ message: "Unauthorized: Warden or Admin role required." }, { status: 401 });
     }
 
     const bodyResult = await parseAndValidateBody<{ passId?: unknown }>(req);

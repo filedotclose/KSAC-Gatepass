@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       query = { studentId: user._id };
     } else if (user.role === "warden") {
       query = {};
-    } else if (user.role === "ksac") {
+    } else if (user.role === "ksac" || user.role === "dean") {
       query = { status: { $in: ["APPROVED", "IN_KSAC"] } };
     }
 

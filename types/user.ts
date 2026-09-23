@@ -1,4 +1,4 @@
-export type Role = "student" | "warden" | "ksac" | "admin";
+export type Role = "student" | "warden" | "ksac" | "dean" | "admin";
 
 export interface ISocietyPosition {
   society: string;

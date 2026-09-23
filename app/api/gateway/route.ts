@@ -6,6 +6,11 @@ import Pass from "@/models/Pass";
 import RoomBooking from "@/models/RoomBooking";
 import ActivityLog from "@/models/ActivityLog";
 import KSACRegistry from "@/models/KSACRegistry";
+import AttendanceSession from "@/models/AttendanceSession";
+import AttendanceRecord from "@/models/AttendanceRecord";
+import { generateQRToken, validateQRToken } from "@/lib/qrToken";
+import { generateAttendanceExcel, sendAttendanceEmail } from "@/lib/attendance-email";
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { validateBookingTimeWindow } from "@/lib/ksacSocieties";
 import { getClientIp, checkGeneralRateLimit, setRateLimitHeaders } from "@/lib/rateLimit";
@@ -239,10 +244,10 @@ export async function POST(req: Request) {
       return response;
     }
 
-    // OP 0x04: ACTION ROOM BOOKING (Approve/Reject by KSAC Authority or Admin)
+    // OP 0x04: ACTION ROOM BOOKING (Approve/Reject by KSAC Authority, Dean or Admin)
     if (op === GATEWAY_OPCODES.ACTION_ROOM_BOOKING) {
-      if (user.role !== "ksac" && user.role !== "admin") {
-        return NextResponse.json({ message: "Access restricted: KSAC Authority role required." }, { status: 403 });
+      if (user.role !== "ksac" && user.role !== "dean" && user.role !== "admin") {
+        return NextResponse.json({ message: "Access restricted: KSAC Authority or Dean role required." }, { status: 403 });
       }
 
       const { bookingId, action, note } = payload || {};
@@ -292,8 +297,8 @@ export async function POST(req: Request) {
 
     // OP 0x05: ACTION PASS APPROVE / REJECT (Step 3: KSAC Authority Verifies & Accepts)
     if (op === GATEWAY_OPCODES.ACTION_PASS_APPROVE) {
-      if (user.role !== "ksac" && user.role !== "admin") {
-        return NextResponse.json({ message: "Unauthorized: KSAC Authority verification required." }, { status: 403 });
+      if (user.role !== "ksac" && user.role !== "dean" && user.role !== "admin") {
+        return NextResponse.json({ message: "Unauthorized: KSAC Authority or Dean verification required." }, { status: 403 });
       }
 
       const { passId, action = "APPROVE", note } = payload || {};
@@ -386,7 +391,7 @@ export async function POST(req: Request) {
 
     // OP 0x07: FETCH KSAC REGISTRY
     if (op === GATEWAY_OPCODES.FETCH_KSAC_REGISTRY) {
-      if (user.role !== "ksac" && user.role !== "warden" && user.role !== "admin") {
+      if (user.role !== "ksac" && user.role !== "dean" && user.role !== "warden" && user.role !== "admin") {
         return NextResponse.json({ message: "Unauthorized." }, { status: 403 });
       }
       const rawDate = sanitizeString(payload?.date, 20, "Date").value || new Date().toISOString().split("T")[0];
@@ -420,7 +425,7 @@ export async function POST(req: Request) {
 
     // OP 0x09: FETCH KSAC PASSES & ROOM BOOKINGS
     if (op === GATEWAY_OPCODES.FETCH_KSAC_PASSES) {
-      if (user.role !== "ksac" && user.role !== "admin") {
+      if (user.role !== "ksac" && user.role !== "dean" && user.role !== "admin") {
         return NextResponse.json({ message: "Unauthorized." }, { status: 403 });
       }
 
@@ -538,7 +543,7 @@ export async function POST(req: Request) {
         rollNo: rollNoCheck.value,
         email: cleanEmail,
         passwordHash,
-        role: ["student", "warden", "ksac", "admin"].includes(role) ? role : "student",
+        role: ["student", "warden", "ksac", "dean", "admin"].includes(role) ? role : "student",
         hostel: sanitizeString(hostel, 50, "Hostel").value || "KP-7A",
         isSocietyLead: Boolean(isSocietyLead),
         society: sanitizeString(society, 100, "Society").value,
@@ -575,7 +580,7 @@ export async function POST(req: Request) {
           targetUser.email = cleanEmail;
         }
       }
-      if (role && ["student", "warden", "ksac", "admin"].includes(role)) {
+      if (role && ["student", "warden", "ksac", "dean", "admin"].includes(role)) {
         targetUser.role = role;
       }
       if (hostel) {
@@ -720,6 +725,286 @@ export async function POST(req: Request) {
       await booking.save();
 
       const response = NextResponse.json({ message: "Booking status overridden by admin.", booking });
+      setRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
+    }
+    // =============================================================
+    // DEAN & ATTENDANCE OPCODES (0x20 - 0x27)
+    // =============================================================
+
+    // OP 0x20: FETCH DEAN DASHBOARD
+    if (op === GATEWAY_OPCODES.FETCH_DEAN_DASHBOARD) {
+      if (user.role !== "dean" && user.role !== "admin") {
+        return NextResponse.json({ message: "Unauthorized." }, { status: 403 });
+      }
+
+      const passes = await Pass.find({})
+        .populate("studentId", "name rollNo email hostel")
+        .populate("wardenActionBy", "name rollNo")
+        .sort({ createdAt: -1 });
+
+      const bookings = await RoomBooking.find({})
+        .populate("studentId", "name rollNo email society position hostel")
+        .populate("actionBy", "name rollNo email")
+        .sort({ createdAt: -1 });
+
+      const sessions = await AttendanceSession.find({})
+        .sort({ createdAt: -1 });
+
+      const response = NextResponse.json({ passes, bookings, sessions });
+      setRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
+    }
+
+    // OP 0x21: CREATE ATTENDANCE SESSION
+    if (op === GATEWAY_OPCODES.CREATE_ATTENDANCE_SESSION) {
+      if (user.role !== "dean" && user.role !== "admin") {
+        return NextResponse.json({ message: "Unauthorized." }, { status: 403 });
+      }
+
+      const { eventName, recipientEmail } = payload || {};
+      const eventNameCheck = sanitizeString(eventName, 100, "Event Name");
+      if (!eventNameCheck.valid || !eventNameCheck.value) {
+        return NextResponse.json({ message: "Event Name is required." }, { status: 400 });
+      }
+
+      const activeSession = await AttendanceSession.findOne({ status: "ACTIVE" });
+      if (activeSession) {
+        return NextResponse.json({ message: "An attendance session is already active." }, { status: 409 });
+      }
+
+      let cleanRecipientEmail = process.env.ATTENDANCE_RECIPIENT_EMAIL || "work.sujalagarwal@gmail.com";
+      if (typeof recipientEmail === "string" && recipientEmail.trim()) {
+        const trimmed = recipientEmail.trim().toLowerCase();
+        if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(trimmed)) {
+          cleanRecipientEmail = trimmed;
+        }
+      }
+
+      const qrSecret = crypto.randomBytes(32).toString("hex");
+
+      const session = await AttendanceSession.create({
+        eventName: eventNameCheck.value,
+        createdBy: user._id,
+        recipientEmail: cleanRecipientEmail,
+        qrSecret,
+        status: "ACTIVE",
+      });
+
+      const response = NextResponse.json({ session });
+      setRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
+    }
+
+    // OP 0x22: TOGGLE LOGIN LOCK
+    if (op === GATEWAY_OPCODES.TOGGLE_LOGIN_LOCK) {
+      if (user.role !== "dean" && user.role !== "admin") {
+        return NextResponse.json({ message: "Unauthorized." }, { status: 403 });
+      }
+
+      const { sessionId, lock } = payload || {};
+      if (!isValidMongoId(sessionId)) {
+        return NextResponse.json({ message: "Invalid Session ID." }, { status: 400 });
+      }
+
+      const session = await AttendanceSession.findOne({ _id: sessionId, status: "ACTIVE" });
+      if (!session) {
+        return NextResponse.json({ message: "Active session not found." }, { status: 404 });
+      }
+
+      session.loginLocked = Boolean(lock);
+      await session.save();
+
+      const response = NextResponse.json({ session });
+      setRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
+    }
+
+    // OP 0x23: GENERATE QR TOKEN
+    if (op === GATEWAY_OPCODES.GENERATE_QR_TOKEN) {
+      if (user.role !== "dean" && user.role !== "admin") {
+        return NextResponse.json({ message: "Unauthorized." }, { status: 403 });
+      }
+
+      const { sessionId } = payload || {};
+      if (!isValidMongoId(sessionId)) {
+        return NextResponse.json({ message: "Invalid Session ID." }, { status: 400 });
+      }
+
+      const session = await AttendanceSession.findOne({ _id: sessionId, status: "ACTIVE" });
+      if (!session) {
+        return NextResponse.json({ message: "Active session not found." }, { status: 404 });
+      }
+      
+      // Ensure login lock is active before generating QR for security
+      if (!session.loginLocked) {
+        return NextResponse.json({ message: "Please lock login/logout before generating QR." }, { status: 400 });
+      }
+
+      session.currentSequence += 1;
+      await session.save();
+
+      const { token, tsBucket } = generateQRToken(session.qrSecret, session._id.toString(), session.currentSequence);
+
+      const response = NextResponse.json({
+        sessionId: session._id.toString(),
+        sequence: session.currentSequence,
+        token,
+        tsBucket,
+      });
+      setRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
+    }
+
+    // OP 0x24: SCAN QR ATTENDANCE
+    if (op === GATEWAY_OPCODES.SCAN_QR_ATTENDANCE) {
+      if (user.role !== "student") {
+        return NextResponse.json({ message: "Only students can mark attendance." }, { status: 403 });
+      }
+
+      const { sessionId, sequence, tsBucket, token } = payload || {};
+      if (!isValidMongoId(sessionId)) {
+        return NextResponse.json({ message: "Invalid Session ID." }, { status: 400 });
+      }
+
+      const session = await AttendanceSession.findOne({ _id: sessionId, status: "ACTIVE" });
+      if (!session) {
+        return NextResponse.json({ message: "Attendance session is no longer active." }, { status: 404 });
+      }
+
+      const isValid = validateQRToken(
+        session.qrSecret,
+        session._id.toString(),
+        session.currentSequence,
+        sequence,
+        tsBucket,
+        token
+      );
+
+      if (!isValid) {
+        return NextResponse.json({ message: "Invalid or expired QR code. Please scan the latest one." }, { status: 400 });
+      }
+
+      // Check if already scanned
+      const existing = await AttendanceRecord.findOne({ sessionId: session._id, studentId: user._id });
+      if (existing) {
+        return NextResponse.json({ message: "You have already marked your attendance.", record: existing });
+      }
+
+      const record = await AttendanceRecord.create({
+        sessionId: session._id,
+        studentId: user._id,
+        name: user.name,
+        rollNo: user.rollNo,
+        hostelName: user.hostel,
+        qrSequence: sequence,
+      });
+
+      const response = NextResponse.json({ record });
+      setRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
+    }
+
+    // OP 0x25: CONFIRM ATTENDANCE
+    if (op === GATEWAY_OPCODES.CONFIRM_ATTENDANCE) {
+      if (user.role !== "student") {
+        return NextResponse.json({ message: "Unauthorized." }, { status: 403 });
+      }
+
+      const { recordId, sessionId, phoneNo, phone } = payload || {};
+      const actualPhone = phoneNo || phone;
+
+      const query: any = { studentId: user._id };
+      if (recordId && isValidMongoId(recordId)) {
+        query._id = recordId;
+      } else if (sessionId && isValidMongoId(sessionId)) {
+        query.sessionId = sessionId;
+      } else {
+        return NextResponse.json({ message: "Valid Record ID or Session ID required." }, { status: 400 });
+      }
+
+      const record = await AttendanceRecord.findOne(query);
+      if (!record) {
+        return NextResponse.json({ message: "Attendance record not found." }, { status: 404 });
+      }
+
+      if (record.confirmedAt) {
+        return NextResponse.json({ message: "Already confirmed.", record });
+      }
+
+      record.phoneNo = sanitizeString(actualPhone, 20, "Phone No").value;
+      record.confirmedAt = new Date();
+      await record.save();
+
+      const response = NextResponse.json({ record });
+      setRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
+    }
+
+    // OP 0x26: END ATTENDANCE SESSION
+    if (op === GATEWAY_OPCODES.END_ATTENDANCE_SESSION) {
+      if (user.role !== "dean" && user.role !== "admin") {
+        return NextResponse.json({ message: "Unauthorized." }, { status: 403 });
+      }
+
+      const { sessionId } = payload || {};
+      if (!isValidMongoId(sessionId)) {
+        return NextResponse.json({ message: "Invalid Session ID." }, { status: 400 });
+      }
+
+      const session = await AttendanceSession.findOne({ _id: sessionId, status: "ACTIVE" });
+      if (!session) {
+        return NextResponse.json({ message: "Active session not found." }, { status: 404 });
+      }
+
+      session.status = "COMPLETED";
+      session.completedAt = new Date();
+      session.loginLocked = false;
+      await session.save();
+
+      // Fetch all confirmed records
+      const records = await AttendanceRecord.find({ sessionId: session._id, confirmedAt: { $ne: null } })
+        .sort({ scannedAt: 1 });
+
+      const durationMinutes = Math.round((session.completedAt.getTime() - session.startedAt.getTime()) / 60000);
+
+      // Generate Excel and Send Email (fire and forget for now, or await)
+      try {
+        const excelBuffer = await generateAttendanceExcel(session.eventName, records);
+        await sendAttendanceEmail(
+          session.eventName,
+          session.recipientEmail,
+          excelBuffer,
+          records.length,
+          durationMinutes
+        );
+      } catch (e) {
+        console.error("Failed to generate/send attendance email", e);
+        // We still complete the session even if email fails, UI will handle
+      }
+
+      const response = NextResponse.json({ session, totalRecords: records.length });
+      setRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
+    }
+
+    // OP 0x27: FETCH ATTENDANCE STATUS
+    if (op === GATEWAY_OPCODES.FETCH_ATTENDANCE_STATUS) {
+      const session = await AttendanceSession.findOne({ status: "ACTIVE" });
+      if (!session) {
+        return NextResponse.json({ active: false });
+      }
+
+      let userRecord = null;
+      if (user.role === "student") {
+        userRecord = await AttendanceRecord.findOne({ sessionId: session._id, studentId: user._id });
+      }
+
+      const response = NextResponse.json({ 
+        active: true, 
+        session: { _id: session._id, eventName: session.eventName, loginLocked: session.loginLocked },
+        userRecord 
+      });
       setRateLimitHeaders(response.headers, rateLimitResult);
       return response;
     }

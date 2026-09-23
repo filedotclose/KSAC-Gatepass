@@ -14,6 +14,8 @@ import {
 } from "@/lib/ksacSocieties";
 import { dispatchGateway, GATEWAY_OPCODES } from "@/lib/gatewayClient";
 
+import { Html5QrcodeScanner } from "html5-qrcode";
+
 interface Props {
   user: IUser;
 }
@@ -55,6 +57,14 @@ const COMMON_SOCIETIES = [
 
 export default function StudentView({ user }: Props) {
   const [activeTab, setActiveTab] = useState<"pass" | "room">("pass");
+
+  // Attendance state
+  const [attendanceStatus, setAttendanceStatus] = useState<any>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannedQR, setScannedQR] = useState<any>(null);
+  const [attendancePhone, setAttendancePhone] = useState("");
+  const [attendanceMessage, setAttendanceMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [markingAttendance, setMarkingAttendance] = useState(false);
 
   // GatePass states
   const [passes, setPasses] = useState<any[]>([]);
@@ -105,12 +115,20 @@ export default function StudentView({ user }: Props) {
   const fetchStudentData = async (isManualSync = false) => {
     if (isManualSync) setIsSyncing(true);
     try {
-      const res = await dispatchGateway(GATEWAY_OPCODES.FETCH_STUDENT_DASHBOARD);
-      if (res.ok && res.data) {
-        setPasses(Array.isArray(res.data.passes) ? res.data.passes : []);
+      const [dashboardRes, attendanceRes] = await Promise.all([
+        dispatchGateway(GATEWAY_OPCODES.FETCH_STUDENT_DASHBOARD),
+        dispatchGateway(GATEWAY_OPCODES.FETCH_ATTENDANCE_STATUS)
+      ]);
+      
+      if (dashboardRes.ok && dashboardRes.data) {
+        setPasses(Array.isArray(dashboardRes.data.passes) ? dashboardRes.data.passes : []);
         if (user.isSocietyLead) {
-          setBookings(Array.isArray(res.data.bookings) ? res.data.bookings : []);
+          setBookings(Array.isArray(dashboardRes.data.bookings) ? dashboardRes.data.bookings : []);
         }
+      }
+      
+      if (attendanceRes.ok && attendanceRes.data) {
+        setAttendanceStatus(attendanceRes.data);
       }
     } catch (err) {
       console.error("Failed to fetch student data via gateway", err);
@@ -126,6 +144,75 @@ export default function StudentView({ user }: Props) {
   useEffect(() => {
     fetchStudentData(false);
   }, [user.isSocietyLead]);
+
+  useEffect(() => {
+    if (!showScanner) return;
+
+    const scanner = new Html5QrcodeScanner(
+      "reader",
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      /* verbose= */ false
+    );
+
+    scanner.render(
+      async (decodedText) => {
+        try {
+          const payload = JSON.parse(decodedText);
+          if (payload.sid && payload.tok) {
+            scanner.clear();
+            setShowScanner(false);
+            
+            // Verify scan with server
+            const res = await dispatchGateway(GATEWAY_OPCODES.SCAN_QR_ATTENDANCE, {
+              sessionId: payload.sid,
+              token: payload.tok,
+              sequence: payload.seq,
+              tsBucket: payload.ts
+            });
+
+            if (res.ok) {
+              setScannedQR({ ...payload, ...res.data });
+              setAttendanceMessage(null);
+            } else {
+              setAttendanceMessage({ type: "error", text: res.message || "Invalid or expired QR code" });
+            }
+          }
+        } catch (e) {
+          console.error("Invalid QR format");
+        }
+      },
+      (error) => {
+        // ignore errors during scanning
+      }
+    );
+
+    return () => {
+      scanner.clear().catch(console.error);
+    };
+  }, [showScanner]);
+
+  const handleConfirmAttendance = async () => {
+    if (!scannedQR) return;
+    setMarkingAttendance(true);
+    const res = await dispatchGateway(GATEWAY_OPCODES.CONFIRM_ATTENDANCE, {
+      recordId: scannedQR.record?._id || scannedQR._id,
+      sessionId: scannedQR.sid,
+      token: scannedQR.tok,
+      sequence: scannedQR.seq,
+      tsBucket: scannedQR.ts,
+      phoneNo: attendancePhone,
+      phone: attendancePhone,
+    });
+
+    if (res.ok) {
+      setAttendanceMessage({ type: "success", text: "Attendance marked successfully!" });
+      setScannedQR(null);
+      fetchStudentData(false);
+    } else {
+      setAttendanceMessage({ type: "error", text: res.message || "Failed to mark attendance" });
+    }
+    setMarkingAttendance(false);
+  };
 
   const handleSocietyChange = (soc: string) => {
     setBookingSociety(soc);
@@ -279,6 +366,95 @@ export default function StudentView({ user }: Props) {
           </button>
         </div>
       </header>
+
+      {/* Attendance Banner / Scanner */}
+      {attendanceStatus?.session && (
+        <div className="bg-indigo-900 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          </div>
+          
+          <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <span className="bg-indigo-500/30 text-indigo-200 text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-widest border border-indigo-400/30">Live Event</span>
+              <h2 className="text-2xl sm:text-3xl font-black">{attendanceStatus.session.eventName}</h2>
+              <p className="text-indigo-200">Event attendance is currently active. Scan the QR code projected by the Dean to mark your presence.</p>
+            </div>
+            
+            {!showScanner && !scannedQR && (
+              <button
+                onClick={() => setShowScanner(true)}
+                className="w-full sm:w-auto px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-900 rounded-2xl font-black uppercase tracking-wider transition-transform hover:scale-105 shadow-xl shadow-emerald-500/20 whitespace-nowrap"
+              >
+                Scan QR Code
+              </button>
+            )}
+          </div>
+
+          {showScanner && (
+            <div className="mt-8 bg-white rounded-2xl p-4 text-slate-900 max-w-md mx-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-lg">Scan Attendance QR</h3>
+                <button onClick={() => setShowScanner(false)} className="text-slate-400 hover:text-slate-700">✕</button>
+              </div>
+              <div id="reader" className="w-full"></div>
+            </div>
+          )}
+
+          {scannedQR && (
+            <div className="mt-8 bg-white rounded-2xl p-6 text-slate-900 max-w-md mx-auto animate-in zoom-in-95 relative z-10">
+              <h3 className="font-black text-xl mb-4 text-center">Confirm Attendance</h3>
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Name</span>
+                  <span className="font-bold">{user.name}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Roll No</span>
+                  <span className="font-bold">{user.rollNo}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Hostel</span>
+                  <span className="font-bold">{user.hostel || "Not set"}</span>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Phone Number (Required)</label>
+                  <input
+                    type="tel"
+                    value={attendancePhone}
+                    onChange={(e) => setAttendancePhone(e.target.value)}
+                    placeholder="Enter phone number"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                    required
+                  />
+                </div>
+              </div>
+              
+              {attendanceMessage && (
+                <div className={`p-3 rounded-lg text-sm font-bold mb-4 ${attendanceMessage.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                  {attendanceMessage.text}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setScannedQR(null); setAttendanceMessage(null); }}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmAttendance}
+                  disabled={markingAttendance || !attendancePhone || attendanceMessage?.type === 'success'}
+                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors shadow-md shadow-indigo-200"
+                >
+                  {markingAttendance ? "Marking..." : "Confirm"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tab Navigation: Mobile Pill / Desktop Bar */}
       <div className="flex gap-2 sm:gap-3 border-b border-slate-200/80 pb-2 overflow-x-auto no-scrollbar">

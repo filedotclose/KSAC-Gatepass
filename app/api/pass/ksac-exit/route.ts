@@ -21,8 +21,8 @@ export async function POST(req: Request) {
     }
 
     const user = await getUserFromToken();
-    if (!user || user.role !== "ksac") {
-      return NextResponse.json({ message: "Unauthorized: KSAC Authority role required." }, { status: 401 });
+    if (!user || (user.role !== "ksac" && user.role !== "dean")) {
+      return NextResponse.json({ message: "Unauthorized: KSAC Authority or Dean role required." }, { status: 401 });
     }
 
     const bodyResult = await parseAndValidateBody<{ passId?: unknown }>(req);

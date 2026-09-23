@@ -1,12 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Navbar() {
   const router = useRouter();
+  const [logoutError, setLogoutError] = useState("");
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    const res = await fetch("/api/auth/logout", { method: "POST" });
+    if (res.status === 423) {
+      setLogoutError("Logout is temporarily locked during an active attendance session.");
+      setTimeout(() => setLogoutError(""), 5000);
+      return;
+    }
     router.push("/login");
     router.refresh();
   };
@@ -39,22 +46,27 @@ export default function Navbar() {
 
         </div>
 
-        <button
-          onClick={handleLogout}
-          aria-label="Logout"
-          className="group flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-6 md:px-8 py-2 sm:py-3 bg-slate-900 text-white rounded-xl sm:rounded-2xl md:rounded-[1.8rem] hover:bg-emerald-600 transition-all duration-300 active:scale-95 shadow-md sm:shadow-xl shadow-slate-900/10 touch-btn shrink-0"
-        >
-          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-[0.2em]">
-            <span className="inline sm:hidden">Logout</span>
-            <span className="hidden sm:inline">Close Session</span>
-          </span>
-          <div className="w-6 h-6 sm:w-7 sm:h-7 bg-white/10 rounded-full flex items-center justify-center group-hover:translate-x-0.5 transition-transform">
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </div>
-        </button>
+          <button
+            onClick={handleLogout}
+            aria-label="Logout"
+            className="group flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-6 md:px-8 py-2 sm:py-3 bg-slate-900 text-white rounded-xl sm:rounded-2xl md:rounded-[1.8rem] hover:bg-emerald-600 transition-all duration-300 active:scale-95 shadow-md sm:shadow-xl shadow-slate-900/10 touch-btn shrink-0"
+          >
+            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-[0.2em]">
+              <span className="inline sm:hidden">Logout</span>
+              <span className="hidden sm:inline">Close Session</span>
+            </span>
+            <div className="w-6 h-6 sm:w-7 sm:h-7 bg-white/10 rounded-full flex items-center justify-center group-hover:translate-x-0.5 transition-transform">
+              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </div>
+          </button>
       </nav>
+      {logoutError && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-xl animate-in slide-in-from-top-2 z-50">
+          {logoutError}
+        </div>
+      )}
     </div>
   );
 }

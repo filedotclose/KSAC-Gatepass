@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     }
 
     const user = await getUserFromToken();
-    if (!user || (user.role !== "ksac" && user.role !== "warden")) {
+    if (!user || (user.role !== "ksac" && user.role !== "dean" && user.role !== "warden")) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 

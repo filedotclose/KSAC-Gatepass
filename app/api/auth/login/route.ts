@@ -71,6 +71,20 @@ export async function POST(req: Request) {
       return response;
     }
 
+    // Check if attendance session is active with loginLocked (strictly applies to students)
+    if (user.role === "student") {
+      const AttendanceSession = (await import("@/models/AttendanceSession")).default;
+      const activeSession = await AttendanceSession.findOne({ status: "ACTIVE", loginLocked: true });
+      if (activeSession) {
+        const response = NextResponse.json(
+          { message: "Login is temporarily locked for students during an active attendance session." },
+          { status: 423 }
+        );
+        setRateLimitHeaders(response.headers, rateLimitResult);
+        return response;
+      }
+    }
+
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
