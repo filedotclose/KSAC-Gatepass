@@ -37,6 +37,17 @@ export async function generateAttendanceExcel(eventName: string, records: any[])
     return trimmed;
   };
 
+  const istOptions: Intl.DateTimeFormatOptions = {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  };
+
   // Add data with formula injection mitigation
   records.forEach((record, index) => {
     sheet.addRow({
@@ -45,8 +56,10 @@ export async function generateAttendanceExcel(eventName: string, records: any[])
       rollNo: sanitizeCell(record.rollNo),
       phoneNo: sanitizeCell(record.phoneNo || "-"),
       hostelName: sanitizeCell(record.hostelName),
-      scannedAt: new Date(record.scannedAt).toLocaleString("en-IN"),
-      confirmedAt: record.confirmedAt ? new Date(record.confirmedAt).toLocaleString("en-IN") : "Pending",
+      scannedAt: new Date(record.scannedAt).toLocaleString("en-IN", istOptions),
+      confirmedAt: record.confirmedAt
+        ? new Date(record.confirmedAt).toLocaleString("en-IN", istOptions)
+        : "Pending",
     });
   });
 
