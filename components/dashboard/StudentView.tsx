@@ -395,69 +395,129 @@ export default function StudentView({ user }: Props) {
 
       {/* Attendance Banner / Scanner */}
       {attendanceStatus?.session && (
-        <div className="bg-indigo-900 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-          </div>
-          
-          <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <span className="bg-indigo-500/30 text-indigo-200 text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-widest border border-indigo-400/30">Live Event</span>
-              <h2 className="text-2xl sm:text-3xl font-black">{attendanceStatus.session.eventName}</h2>
-              <p className="text-indigo-200">Event attendance is currently active. Scan the QR code projected by the Dean to mark your presence.</p>
+        <div className="bg-white p-5 sm:p-7 md:p-8 rounded-2xl sm:rounded-3xl md:rounded-[2.5rem] shadow-xs sm:shadow-sm border border-emerald-200/80 ring-1 ring-emerald-500/10 relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+
+          <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+            <div className="space-y-1.5 sm:space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="bg-emerald-600 text-white text-[9px] sm:text-[10px] font-black px-2.5 sm:px-3.5 py-1 rounded-lg sm:rounded-xl uppercase tracking-wider sm:tracking-widest flex items-center gap-1.5 shadow-xs shadow-emerald-100">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                  Live Event Attendance
+                </span>
+                {attendanceStatus.userRecord?.confirmedAt && (
+                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] sm:text-[10px] font-black px-2.5 py-1 rounded-lg sm:rounded-xl uppercase tracking-wider">
+                    ✓ Attendance Recorded
+                  </span>
+                )}
+              </div>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                {attendanceStatus.session.eventName}
+              </h2>
+              <p className="text-slate-500 font-medium text-xs sm:text-sm leading-relaxed">
+                {attendanceStatus.userRecord?.confirmedAt
+                  ? "Your attendance has been verified and logged in the official event register."
+                  : "Event attendance is currently active. Scan the dynamic QR code projected by the Dean to mark your presence."}
+              </p>
             </div>
-            
-            {!showScanner && !scannedQR && (
+
+            {!showScanner && !scannedQR && !attendanceStatus.userRecord?.confirmedAt && (
               <button
                 onClick={() => setShowScanner(true)}
-                className="w-full sm:w-auto px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-900 rounded-2xl font-black uppercase tracking-wider transition-transform hover:scale-105 shadow-xl shadow-emerald-500/20 whitespace-nowrap"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 bg-slate-900 hover:bg-emerald-600 text-white rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-wider sm:tracking-widest transition-all duration-300 active:scale-95 shadow-lg shadow-slate-900/10 whitespace-nowrap flex items-center justify-center gap-2 touch-btn"
               >
-                Scan QR Code
+                <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 19h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+                <span>Scan QR Code</span>
               </button>
             )}
           </div>
 
+          {attendanceMessage && !scannedQR && (
+            <div className={`mt-4 p-3.5 rounded-xl sm:rounded-2xl text-xs font-bold border ${
+              attendanceMessage.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                : "bg-red-50 text-red-700 border-red-200"
+            }`}>
+              {attendanceMessage.text}
+            </div>
+          )}
+
           {showScanner && (
-            <div className="mt-8 bg-white rounded-2xl p-4 text-slate-900 max-w-md mx-auto">
+            <div className="mt-6 bg-slate-50 border border-slate-200/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-slate-900 max-w-md mx-auto shadow-inner">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-lg">Scan Attendance QR</h3>
-                <button onClick={() => setShowScanner(false)} className="text-slate-400 hover:text-slate-700">✕</button>
+                <div className="flex items-center gap-2">
+                  <span className="p-2 bg-emerald-600 text-white rounded-lg">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    </svg>
+                  </span>
+                  <h3 className="font-black text-sm sm:text-base text-slate-800 uppercase tracking-wider">
+                    Scan Attendance QR
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowScanner(false)}
+                  className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center font-bold transition-colors"
+                >
+                  ✕
+                </button>
               </div>
-              <div id="reader" className="w-full"></div>
+              <div id="reader" className="w-full rounded-xl overflow-hidden bg-white border border-slate-200"></div>
             </div>
           )}
 
           {scannedQR && (
-            <div className="mt-8 bg-white rounded-2xl p-6 text-slate-900 max-w-md mx-auto animate-in zoom-in-95 relative z-10">
-              <h3 className="font-black text-xl mb-4 text-center">Confirm Attendance</h3>
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-500">Name</span>
-                  <span className="font-bold">{user.name}</span>
+            <div className="mt-6 bg-slate-50/80 border border-slate-200/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-slate-900 max-w-md mx-auto animate-in zoom-in-95 relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <span className="bg-emerald-600 text-white text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest">
+                  QR Verified
+                </span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Confirm Details
+                </span>
+              </div>
+
+              <h3 className="font-black text-lg sm:text-xl text-slate-900 mb-4">
+                Confirm Your Attendance
+              </h3>
+
+              <div className="space-y-2.5 mb-5 bg-white p-4 rounded-2xl border border-slate-200/70">
+                <div className="flex justify-between items-center text-xs border-b border-slate-100 pb-2">
+                  <span className="text-slate-400 font-bold uppercase text-[10px]">Student Name</span>
+                  <span className="font-black text-slate-800">{user.name}</span>
                 </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-500">Roll No</span>
-                  <span className="font-bold">{user.rollNo}</span>
+                <div className="flex justify-between items-center text-xs border-b border-slate-100 pb-2">
+                  <span className="text-slate-400 font-bold uppercase text-[10px]">Roll Number</span>
+                  <span className="font-mono font-black text-emerald-700">{user.rollNo}</span>
                 </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-500">Hostel</span>
-                  <span className="font-bold">{user.hostel || "Not set"}</span>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Phone Number (Required)</label>
-                  <input
-                    type="tel"
-                    value={attendancePhone}
-                    onChange={(e) => setAttendancePhone(e.target.value)}
-                    placeholder="Enter phone number"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                    required
-                  />
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400 font-bold uppercase text-[10px]">Hostel</span>
+                  <span className="font-bold text-slate-700">{user.hostel || "N/A"}</span>
                 </div>
               </div>
-              
+
+              <div className="mb-5">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">
+                  Mobile Number <span className="text-emerald-600">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={attendancePhone}
+                  onChange={(e) => setAttendancePhone(e.target.value)}
+                  placeholder="Enter 10-digit phone number"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 text-sm font-bold text-slate-900 outline-none transition-all"
+                  required
+                />
+              </div>
+
               {attendanceMessage && (
-                <div className={`p-3 rounded-lg text-sm font-bold mb-4 ${attendanceMessage.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                <div className={`p-3 rounded-xl text-xs font-bold mb-4 border ${
+                  attendanceMessage.type === "success"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-red-50 text-red-700 border-red-200"
+                }`}>
                   {attendanceMessage.text}
                 </div>
               )}
@@ -465,16 +525,16 @@ export default function StudentView({ user }: Props) {
               <div className="flex gap-3">
                 <button
                   onClick={() => { setScannedQR(null); setAttendanceMessage(null); }}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors"
+                  className="flex-1 py-3.5 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider transition-colors touch-btn"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmAttendance}
-                  disabled={markingAttendance || !attendancePhone || attendanceMessage?.type === 'success'}
-                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors shadow-md shadow-indigo-200"
+                  disabled={markingAttendance || !attendancePhone || attendanceMessage?.type === "success"}
+                  className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-200 touch-btn"
                 >
-                  {markingAttendance ? "Marking..." : "Confirm"}
+                  {markingAttendance ? "Recording..." : "Confirm Check-In"}
                 </button>
               </div>
             </div>

@@ -393,7 +393,7 @@ export default function DeanView({ user }: Props) {
           onClick={() => setActiveTab("attendance")}
           className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs uppercase tracking-wider transition-all duration-300 relative shrink-0 touch-btn ${
             activeTab === "attendance"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-200"
               : "bg-white text-slate-500 hover:bg-slate-50 border border-slate-200/60"
           }`}
         >
@@ -402,8 +402,8 @@ export default function DeanView({ user }: Props) {
           </svg>
           <span>Event Attendance</span>
           {activeSession && (
-            <span className="px-1.5 py-0.5 text-[8px] bg-indigo-200 text-indigo-900 rounded-full font-black flex gap-1 items-center">
-              <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-pulse"></div> Active
+            <span className="px-1.5 py-0.5 text-[8px] bg-emerald-100 text-emerald-900 rounded-full font-black flex gap-1 items-center">
+              <div className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse"></div> Active
             </span>
           )}
         </button>
@@ -733,22 +733,27 @@ export default function DeanView({ user }: Props) {
       {activeTab === "attendance" && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
           {!activeSession ? (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-xl max-w-xl mx-auto mt-10">
-              <h2 className="text-2xl font-black text-slate-900 mb-6 text-center">Create Attendance Session</h2>
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 ring-1 ring-slate-200/50 shadow-xl shadow-emerald-950/5 max-w-xl mx-auto mt-10">
+              <div className="flex items-center gap-2 justify-center mb-2">
+                <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest">
+                  Dean Portal
+                </span>
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 mb-6 text-center">Create <span className="gradient-text">Attendance Session</span></h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Event Name</label>
+                  <label className="block text-xs font-black text-slate-400 mb-1.5 uppercase tracking-wider">Event Name</label>
                   <input
                     type="text"
                     value={newEventName}
                     onChange={(e) => setNewEventName(e.target.value)}
                     placeholder="e.g. Annual Tech Fest 2026"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none font-bold text-slate-900"
                   />
                 </div>
                 <button
                   onClick={handleCreateSession}
-                  className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black uppercase tracking-wider transition-colors shadow-lg shadow-indigo-200"
+                  className="w-full py-3.5 bg-slate-900 hover:bg-emerald-600 text-white rounded-xl font-black uppercase tracking-wider transition-all shadow-lg shadow-slate-900/10"
                 >
                   Create Session
                 </button>
@@ -757,54 +762,56 @@ export default function DeanView({ user }: Props) {
           ) : (
             <div className="grid lg:grid-cols-2 gap-6">
               {/* Controls */}
-              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-md space-y-6">
+              <div className="bg-white rounded-3xl p-6 border border-slate-100 ring-1 ring-slate-200/50 shadow-xl shadow-emerald-950/5 space-y-6">
                 <div>
-                  <h2 className="text-xl font-black text-slate-900">Active Session</h2>
-                  <p className="text-indigo-600 font-bold text-lg">{activeSession.eventName}</p>
+                  <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest inline-block mb-2">
+                    Active Session
+                  </span>
+                  <h2 className="text-2xl font-black text-slate-900">{activeSession.eventName}</h2>
                 </div>
 
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
-                  <h3 className="font-bold text-slate-700">1. Security Lock</h3>
-                  <p className="text-sm text-slate-500">
-                    Locking the session prevents all logged-in students from logging out, and stops new logins. 
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-4">
+                  <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider">1. Security Lock</h3>
+                  <p className="text-sm text-slate-500 font-medium">
+                    Locking the session prevents all logged-in students from logging out, and stops new student logins. 
                     This ensures strict location tracking.
                   </p>
                   {activeSession.loginLocked ? (
                     <button
                       onClick={() => handleToggleLock(false)}
-                      className="w-full py-3 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl font-black uppercase transition-colors"
+                      className="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-black text-xs uppercase tracking-wider transition-colors"
                     >
                       Unlock Session (Not Recommended)
                     </button>
                   ) : (
                     <button
                       onClick={() => handleToggleLock(true)}
-                      className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black uppercase transition-colors flex justify-center gap-2"
+                      className="w-full py-3 bg-slate-900 hover:bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
                     >
                       <span>Lock Logins & Logouts</span>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                     </button>
                   )}
                 </div>
 
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
-                  <h3 className="font-bold text-slate-700">2. Generate QR</h3>
-                  <p className="text-sm text-slate-500">
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-4">
+                  <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider">2. Generate QR</h3>
+                  <p className="text-sm text-slate-500 font-medium">
                     The QR code rotates every 5 seconds cryptographically to prevent proxy attendance.
                   </p>
                   <button
                     onClick={handleGenerateQR}
                     disabled={!activeSession.loginLocked || !!qrDataUrl}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-black uppercase transition-colors shadow-lg shadow-indigo-200"
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-colors shadow-lg shadow-emerald-600/20"
                   >
                     Start QR Projection
                   </button>
                 </div>
 
-                <div className="pt-4 border-t border-slate-200">
+                <div className="pt-4 border-t border-slate-200/80">
                   <button
                     onClick={handleEndSession}
-                    className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black uppercase tracking-wider transition-colors shadow-lg shadow-red-200"
+                    className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-colors shadow-lg shadow-rose-200"
                   >
                     End Session & Email Report
                   </button>
@@ -812,56 +819,56 @@ export default function DeanView({ user }: Props) {
               </div>
 
               {/* QR Display */}
-              <div className="bg-slate-900 rounded-3xl p-8 flex flex-col items-center justify-center min-h-[500px] shadow-2xl relative overflow-hidden">
+              <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-emerald-950 border border-emerald-500/20 rounded-3xl p-8 flex flex-col items-center justify-center min-h-[500px] shadow-2xl relative overflow-hidden">
                 {qrDataUrl ? (
                   <div className="relative z-10 flex flex-col items-center">
                     <h3 className="text-white font-black text-2xl mb-6 tracking-wider text-center">{activeSession.eventName}</h3>
-                    <div className="p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(79,70,229,0.5)]">
+                    <div className="p-4 bg-white rounded-3xl shadow-[0_0_50px_rgba(16,185,129,0.35)]">
                       <img src={qrDataUrl} alt="Attendance QR" className="w-64 h-64 sm:w-80 sm:h-80 object-contain" />
                     </div>
                     <div className="mt-8 text-center space-y-2">
-                      <p className="text-emerald-400 font-bold tracking-widest uppercase">Scan to Mark Attendance</p>
-                      <p className="text-slate-400 text-xs">QR updates every 5 seconds to prevent proxies</p>
+                      <p className="text-emerald-400 font-black tracking-widest uppercase text-xs">Scan to Mark Attendance</p>
+                      <p className="text-slate-400 text-xs font-medium">QR updates every 5 seconds to prevent proxies</p>
                       <div className="flex items-center gap-2 justify-center mt-2">
-                        <div className="w-2 h-2 rounded-full bg-red-500 animate-ping"></div>
-                        <span className="text-slate-500 font-mono text-xs">SEQ: {qrTokenData?.sequence}</span>
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+                        <span className="text-emerald-300/80 font-mono text-xs font-bold">SEQ: {qrTokenData?.sequence}</span>
                       </div>
                       {qrLink && (
-                        <div className="mt-4 pt-3 border-t border-slate-800 text-left max-w-sm mx-auto">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Direct Link (Encodes into QR):</p>
-                          <div className="flex items-center gap-2 bg-slate-950/80 p-2 rounded-xl border border-slate-800">
+                        <div className="mt-4 pt-3 border-t border-white/10 text-left max-w-sm mx-auto">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Direct Link (Encodes into QR):</p>
+                          <div className="flex items-center gap-2 bg-slate-950/80 p-2 rounded-xl border border-white/10">
                             <input
                               type="text"
                               readOnly
                               value={qrLink}
-                              className="bg-transparent text-indigo-300 font-mono text-[10px] truncate w-full outline-none"
+                              className="bg-transparent text-emerald-300 font-mono text-[10px] truncate w-full outline-none"
                             />
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(qrLink);
                                 setActionAlert({ type: "success", message: "Attendance link copied to clipboard!" });
                               }}
-                              className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[9px] font-bold uppercase shrink-0 transition-colors"
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase shrink-0 transition-colors"
                             >
                               Copy
                             </button>
                           </div>
-                          <p className="text-[9px] text-slate-500 mt-1">Students can scan this directly with any phone camera or via the Student Portal.</p>
+                          <p className="text-[9px] text-slate-400 mt-1">Students can scan this directly with any phone camera or via the Student Portal.</p>
                         </div>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <div className="text-slate-500 text-center relative z-10">
-                    <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 19h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
-                    <p className="font-bold">QR Projector Idle</p>
-                    <p className="text-sm">Lock session and generate QR to start</p>
+                  <div className="text-slate-400 text-center relative z-10">
+                    <svg className="w-16 h-16 mx-auto mb-4 text-emerald-500/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 19h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                    <p className="font-black text-white">QR Projector Idle</p>
+                    <p className="text-xs text-slate-400 mt-1">Lock session and generate QR to start</p>
                   </div>
                 )}
                 
                 {qrDataUrl && (
                   <div className="absolute top-0 left-0 w-full h-1 bg-slate-800">
-                    <div className="h-full bg-indigo-500 animate-[progress_5s_linear_infinite]" style={{ width: '100%' }}></div>
+                    <div className="h-full bg-emerald-500 animate-[progress_5s_linear_infinite]" style={{ width: '100%' }}></div>
                   </div>
                 )}
                 <style dangerouslySetInnerHTML={{__html: `
